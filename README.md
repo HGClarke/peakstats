@@ -38,7 +38,7 @@ peakstats/
 
 ### Prerequisites
 
-- Python 3.11+
+- Python 3.12
 - Node 20+
 - A Supabase project (or local Supabase CLI stack)
 - A Strava API application
@@ -81,12 +81,16 @@ App available at `http://localhost:5173`.
 Run tests:
 
 ```bash
+# from frontend/
+cd frontend
 npm test
 ```
 
 Production build:
 
 ```bash
+# from frontend/
+cd frontend
 npm run build
 ```
 

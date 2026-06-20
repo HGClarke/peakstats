@@ -22,3 +22,5 @@ services:
         sync: false
       - key: SESSION_SECRET
         sync: false
+      - key: PYTHON_VERSION
+        value: "3.12.7"
