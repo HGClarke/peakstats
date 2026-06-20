@@ -1,10 +1,5 @@
-function App() {
-  return (
-    <main style={{ fontFamily: "sans-serif", padding: 24 }}>
-      <h1>peakstats</h1>
-      <p>Ride analytics — coming soon.</p>
-    </main>
-  );
-}
+import LandingPage from "./LandingPage";
 
-export default App;
+export default function App() {
+  return <LandingPage />;
+}
