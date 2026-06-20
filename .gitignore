@@ -16,3 +16,4 @@ frontend/dist/
 
 # SDD scratch
 .superpowers/
+.claude/
