@@ -163,16 +163,53 @@ then computes `is_best`/PR per athlete+segment.
 | Settings | `/athlete/settings` | units, theme, default period, disconnect |
 | Empty states | — | per-view |
 
+## Delivery principle
+
+Build **one feature at a time, end to end**. Each increment below is a vertical
+slice — backend endpoint(s) + frontend screen + tests — that is implemented,
+reviewed, and verified working before the next one starts. No "build all the
+backend, then all the frontend" and no batching multiple features into a single
+change. Each increment should be independently demoable and, where it makes sense,
+independently mergeable. The implementation plan must reflect this: one task group
+per increment, with a verification checkpoint at the end of each.
+
 ## Build phasing
 
-1. **Foundation** — scaffold Vite + FastAPI; Supabase schema + RLS; env/secrets;
-   deploy skeletons to Vercel + Render.
-2. **Auth** — Strava OAuth end-to-end; session; login/logout; landing.
-3. **Sync pipeline** — backfill worker + sync screen; manual refresh; webhooks last.
-4. **Read APIs + Overview** — stats aggregation; Overview wired to real data.
-5. **Activities + Trends** — table (filter/sort/page); trends charts.
-6. **Segments + Ride detail** — derived segments; compare; lazy ride detail.
-7. **Settings + polish** — settings persistence; empty states; theming; responsive.
+Phases are ordered so each builds on the last. Within a phase, each numbered item is
+its own increment, built and verified before moving on.
+
+1. **Foundation**
+   1. Scaffold Vite + React app; deploy skeleton to Vercel.
+   2. Scaffold FastAPI app; deploy skeleton to Render; health check.
+   3. Supabase schema + RLS migration; verify policies.
+   4. Env/secrets wiring across all three platforms.
+2. **Auth**
+   1. Strava OAuth login + callback + token storage (backend).
+   2. Session creation + `GET /athlete`; login/landing screen (frontend).
+   3. Logout + `DELETE /athlete/connection`.
+3. **Sync pipeline**
+   1. Backfill worker + `sync_state` + `GET /sync/status` (backend).
+   2. Sync/backfill screen wired to real progress (frontend).
+   3. Manual refresh (`POST /sync/refresh` + button).
+   4. Webhook subscribe + ingest.
+4. **Overview**
+   1. `GET /athlete/stats/overview` aggregation (backend).
+   2. KPI cards + deltas (frontend).
+   3. Distance trend chart.
+   4. Recent rides + top segments panels.
+5. **Activities & Trends**
+   1. `GET /activities` with filter/sort/pagination (backend).
+   2. Activities table + filter bar + pager (frontend).
+   3. `GET /athlete/stats/trends` + Trends screen.
+6. **Segments & Ride detail**
+   1. Segment derivation from activity detail (backend).
+   2. `GET /segments` + segments list (frontend).
+   3. `GET /segments/{id}` + segment compare detail.
+   4. `GET /activities/{id}` lazy detail + ride detail screen (route, splits, elevation).
+7. **Settings & polish**
+   1. `GET`/`PATCH /athlete/settings` + Settings screen.
+   2. Theme + units context persistence.
+   3. Empty states per view; responsive pass.
 
 ## Cross-cutting concerns
 
