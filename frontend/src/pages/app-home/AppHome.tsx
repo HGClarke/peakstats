@@ -1,17 +1,41 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router";
-import { useAthlete, logout, disconnect } from "@/api/auth";
-import { Logo } from "@/components/Logo";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import { Button } from "@/components/ui/button";
+import { disconnect, logout, useAthlete } from "@/api/auth";
+import { useSyncStatus } from "@/api/sync";
+import { AppShell } from "@/components/app-shell/AppShell";
+
+function SkeletonPanels() {
+  return (
+    <div className="p-7">
+      <div className="grid grid-cols-4 gap-4 mb-[18px] max-[1024px]:grid-cols-2">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="bg-surface-card border border-line rounded-2xl p-5">
+            <div className="h-[9px] w-[54px] rounded bg-skel mb-4 animate-pkskel" />
+            <div className="h-[26px] w-[88px] rounded bg-skel mb-[14px] animate-pkskel" />
+            <div className="h-4 w-[46px] rounded-full bg-skel animate-pkskel" />
+          </div>
+        ))}
+      </div>
+      <div className="bg-surface-card border border-line rounded-2xl p-5">
+        <div className="h-[11px] w-[150px] rounded bg-skel mb-5 animate-pkskel" />
+        <div className="h-[180px] rounded-[10px] bg-skel animate-pkskel" />
+      </div>
+    </div>
+  );
+}
 
 export default function AppHome() {
-  const { data, isLoading, error } = useAthlete();
+  const { data: athlete, error } = useAthlete();
+  const { data: status } = useSyncStatus();
   const navigate = useNavigate();
 
   useEffect(() => {
     if (error) navigate("/", { replace: true });
   }, [error, navigate]);
+
+  useEffect(() => {
+    if (status?.status === "never_synced") navigate("/sync", { replace: true });
+  }, [status, navigate]);
 
   const handleLogout = async () => {
     await logout();
@@ -23,50 +47,26 @@ export default function AppHome() {
     navigate("/", { replace: true });
   };
 
-  if (isLoading || !data) {
-    return (
-      <div className="min-h-screen bg-surface-page flex items-center justify-center">
-        <span className="font-mono text-[12px] tracking-[0.06em] text-subtle">
-          Loading…
-        </span>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-surface-page text-ink">
-      <div className="h-[74px] px-11 flex items-center justify-between border-b border-line-subtle">
-        <Logo />
-        <ThemeToggle />
-      </div>
-      <div className="max-w-[1240px] mx-auto px-11 py-16 flex flex-col items-center gap-6">
-        {data.avatar_url ? (
-          <img
-            src={data.avatar_url}
-            alt=""
-            aria-hidden
-            className="w-20 h-20 rounded-full border border-line object-cover"
-          />
-        ) : null}
-        <h1 className="font-display font-semibold text-[28px] tracking-[-0.02em]">
-          {data.name}
-        </h1>
-        <p className="font-mono text-[12px] tracking-[0.06em] text-subtle">
-          You're connected with Strava.
-        </p>
-        <div className="flex items-center gap-3 mt-2">
-          <Button variant="outline" onClick={handleLogout}>
-            Log out
-          </Button>
-          <Button
-            variant="outline"
+    <AppShell
+      navActive="Overview"
+      athlete={athlete}
+      syncLabel="Up to date"
+      onLogout={handleLogout}
+      title="Overview"
+      subtitle="UP TO DATE"
+    >
+      <div className="h-full overflow-y-auto">
+        <SkeletonPanels />
+        <div className="px-7 pb-10">
+          <button
             onClick={handleDisconnect}
-            className="text-strava border-strava/40 hover:bg-strava/10"
+            className="font-mono text-[11px] text-faint bg-transparent border-none cursor-pointer hover:text-strava"
           >
             Disconnect Strava
-          </Button>
+          </button>
         </div>
       </div>
-    </div>
+    </AppShell>
   );
 }
