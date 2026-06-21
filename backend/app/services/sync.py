@@ -15,6 +15,10 @@ logger = logging.getLogger(__name__)
 PER_PAGE = 200
 
 
+class SyncNotReadyError(Exception):
+    """Raised when an incremental refresh is attempted before a backfill completes."""
+
+
 def _to_activity_row(athlete_id: int, summary: dict) -> dict:
     hr = summary.get("average_heartrate")
     activity_map = summary.get("map") or {}
@@ -38,6 +42,14 @@ def get_status(supabase: httpx.Client, athlete_id: int) -> SyncStatusResponse:
     row = sync_state_db.get_sync_state(supabase, athlete_id)
     synced = activities_db.count_activities(supabase, athlete_id)
     if row is None:
+        return SyncStatusResponse(status="never_synced", progress=0, synced=synced)
+    # A row with no completed backfill (e.g. one created by a refresh upsert filling
+    # column defaults) is not a real synced state — treat it as never_synced so the
+    # first-sync flow runs and self-heals.
+    if row["last_backfill_at"] is None and row["status"] not in (
+        "backfilling",
+        "error",
+    ):
         return SyncStatusResponse(status="never_synced", progress=0, synced=synced)
     return SyncStatusResponse(
         status=row["status"],
@@ -101,8 +113,12 @@ def refresh(settings: Settings, athlete_id: int) -> RefreshResponse:
     try:
         access_token = get_valid_access_token(supabase, strava, athlete_id)
         row = sync_state_db.get_sync_state(supabase, athlete_id)
+        if row is None or row["last_backfill_at"] is None:
+            raise SyncNotReadyError(
+                "Refresh requires a completed initial backfill"
+            )
         after: int | None = None
-        if row is not None and row["last_sync_at"] is not None:
+        if row["last_sync_at"] is not None:
             after = int(datetime.fromisoformat(row["last_sync_at"]).timestamp())
         count = 0
         page = 1

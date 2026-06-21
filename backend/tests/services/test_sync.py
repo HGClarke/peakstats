@@ -59,6 +59,55 @@ def test_get_status_reads_row(monkeypatch):
     assert status.last_sync_at == "T2"
 
 
+def test_get_status_phantom_idle_treated_as_never_synced(monkeypatch):
+    # A row created only by refresh has status='idle' but no completed backfill.
+    monkeypatch.setattr(sync_service.sync_state_db, "get_sync_state",
+                        lambda supabase, athlete_id: {"status": "idle", "progress": 0,
+                                                      "last_backfill_at": None,
+                                                      "last_sync_at": "T2",
+                                                      "last_webhook_event_id": None})
+    monkeypatch.setattr(sync_service.activities_db, "count_activities",
+                        lambda supabase, athlete_id: 876)
+    status = sync_service.get_status(object(), 7)
+    assert status.status == "never_synced"
+
+
+def test_get_status_backfilling_preserved(monkeypatch):
+    monkeypatch.setattr(sync_service.sync_state_db, "get_sync_state",
+                        lambda supabase, athlete_id: {"status": "backfilling", "progress": 40,
+                                                      "last_backfill_at": None,
+                                                      "last_sync_at": None,
+                                                      "last_webhook_event_id": None})
+    monkeypatch.setattr(sync_service.activities_db, "count_activities",
+                        lambda supabase, athlete_id: 100)
+    status = sync_service.get_status(object(), 7)
+    assert status.status == "backfilling"
+
+
+def test_refresh_raises_when_never_backfilled(monkeypatch):
+    import pytest
+
+    monkeypatch.setattr(sync_service, "build_supabase", lambda settings: FakeSupabase())
+
+    class FakeStrava:
+        def close(self):
+            pass
+
+    monkeypatch.setattr(sync_service, "build_strava", lambda settings: FakeStrava())
+    monkeypatch.setattr(sync_service, "get_valid_access_token",
+                        lambda supabase, strava, athlete_id: "AT")
+    monkeypatch.setattr(sync_service.sync_state_db, "get_sync_state",
+                        lambda supabase, athlete_id: None)
+
+    def fail_upsert(*a: object, **k: object) -> None:
+        raise AssertionError("must not create a sync_state row on refresh")
+
+    monkeypatch.setattr(sync_service.sync_state_db, "upsert_sync_state", fail_upsert)
+
+    with pytest.raises(sync_service.SyncNotReadyError):
+        sync_service.refresh(settings=object(), athlete_id=7)
+
+
 def test_start_backfill_starts_when_idle(monkeypatch):
     calls = {}
     monkeypatch.setattr(sync_service.sync_state_db, "get_sync_state",
