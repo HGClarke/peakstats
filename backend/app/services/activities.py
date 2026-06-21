@@ -1,17 +1,31 @@
 from datetime import UTC, datetime, timedelta
+from math import ceil
 
 import httpx
 
 from app.db import activities as activities_db
 from app.db.activities import ActivityRow
 from app.models.activities import (
+    ActivityListItem,
+    ActivityListResponse,
     OverviewResponse,
     RecentRideItem,
+    SortDir,
+    SortField,
     WeekDay,
     WeekTotals,
 )
 
 RECENT_LIMIT = 5
+PAGE_SIZE = 9
+
+_SORT_COLUMNS: dict[SortField, str] = {
+    "date": "start_date",
+    "distance": "distance_m",
+    "time": "moving_time_s",
+    "elevation": "elev_gain_m",
+    "speed": "avg_speed_ms",
+}
 _WEEKDAY_LABELS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
 
 
@@ -76,4 +90,49 @@ def get_overview(
         last_week=_totals(last_week),
         week=week,
         recent_rides=recent_rides,
+    )
+
+
+def list_activities(
+    supabase: httpx.Client,
+    athlete_id: int,
+    *,
+    q: str | None,
+    min_dist: float | None,
+    min_time: int | None,
+    min_elev: float | None,
+    sort: SortField,
+    direction: SortDir,
+    page: int,
+    as_of: datetime | None = None,
+) -> ActivityListResponse:
+    snapshot = as_of or datetime.now(UTC)
+    column = _SORT_COLUMNS[sort]
+    primary = (
+        f"{column}.{direction}.nullslast" if sort == "speed"
+        else f"{column}.{direction}"
+    )
+    order = f"{primary},id.{direction}"
+    offset = (page - 1) * PAGE_SIZE
+
+    rows, total = activities_db.list_activities_filtered(
+        supabase, athlete_id,
+        q=q, min_dist=min_dist, min_time=min_time, min_elev=min_elev,
+        order=order, as_of=snapshot.isoformat(), offset=offset, limit=PAGE_SIZE,
+    )
+    items = [
+        ActivityListItem(
+            id=r["id"], name=r["name"], type=r["type"], start_date=r["start_date"],
+            distance_m=r["distance_m"], moving_time_s=r["moving_time_s"],
+            elev_gain_m=r["elev_gain_m"], avg_speed_ms=r["avg_speed_ms"],
+        )
+        for r in rows
+    ]
+    return ActivityListResponse(
+        activities=items,
+        page=page,
+        page_size=PAGE_SIZE,
+        total=total,
+        total_pages=max(1, ceil(total / PAGE_SIZE)),
+        as_of=snapshot,
     )
