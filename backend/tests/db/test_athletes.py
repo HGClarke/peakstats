@@ -1,3 +1,5 @@
+import json
+
 import httpx
 
 from app.db import athletes
@@ -25,8 +27,9 @@ def test_upsert_athlete_posts_with_merge_and_service_key():
     assert seen["url"] == "https://proj.supabase.co/rest/v1/athletes?on_conflict=id"
     assert seen["headers"]["apikey"] == "svc"
     assert seen["headers"]["prefer"] == "resolution=merge-duplicates"
-    assert '"id": 7' in seen["body"]
-    assert '"name": "Ada Lovelace"' in seen["body"]
+    body = json.loads(seen["body"])
+    assert body[0]["id"] == 7
+    assert body[0]["name"] == "Ada Lovelace"
 
 
 def test_get_athlete_returns_first_row_or_none():

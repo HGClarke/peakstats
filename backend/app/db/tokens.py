@@ -1,4 +1,3 @@
-import json
 from datetime import datetime
 
 import httpx
@@ -17,17 +16,14 @@ def upsert_tokens(
         "/strava_tokens",
         params={"on_conflict": "athlete_id"},
         headers=_MERGE,
-        content=json.dumps(
-            [
-                {
-                    "athlete_id": athlete_id,
-                    "access_token": access_token,
-                    "refresh_token": refresh_token,
-                    "expires_at": expires_at.isoformat(),
-                }
-            ],
-            separators=(", ", ": "),
-        ),
+        json=[
+            {
+                "athlete_id": athlete_id,
+                "access_token": access_token,
+                "refresh_token": refresh_token,
+                "expires_at": expires_at.isoformat(),
+            }
+        ],
     )
     response.raise_for_status()
 

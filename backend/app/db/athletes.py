@@ -1,5 +1,3 @@
-import json
-
 import httpx
 
 _MERGE = {"Prefer": "resolution=merge-duplicates"}
@@ -12,7 +10,7 @@ def upsert_athlete(
         "/athletes",
         params={"on_conflict": "id"},
         headers=_MERGE,
-        content=json.dumps([{"id": athlete_id, "name": name, "avatar_url": avatar_url}], separators=(", ", ": ")),
+        json=[{"id": athlete_id, "name": name, "avatar_url": avatar_url}],
     )
     response.raise_for_status()
 

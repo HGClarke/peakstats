@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, timezone
 
 import httpx
@@ -25,8 +26,9 @@ def test_upsert_tokens_serializes_expiry_iso():
     tokens.upsert_tokens(_client(handler), 7, "AT", "RT",
                          datetime(2024, 1, 1, tzinfo=timezone.utc))
     assert seen["url"] == "https://proj.supabase.co/rest/v1/strava_tokens?on_conflict=athlete_id"
-    assert '"access_token": "AT"' in seen["body"]
-    assert "2024-01-01T00:00:00+00:00" in seen["body"]
+    body = json.loads(seen["body"])
+    assert body[0]["access_token"] == "AT"
+    assert body[0]["expires_at"] == "2024-01-01T00:00:00+00:00"
 
 
 def test_get_tokens_returns_first_row_or_none():
