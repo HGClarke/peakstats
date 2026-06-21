@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router";
 import { disconnect, logout, useAthlete } from "@/api/auth";
-import { useSyncStatus } from "@/api/sync";
+import { useRefreshSync, useSyncStatus } from "@/api/sync";
 import { AppShell } from "@/components/app-shell/AppShell";
 
 function SkeletonPanels() {
@@ -27,6 +27,7 @@ function SkeletonPanels() {
 export default function AppHome() {
   const { data: athlete, error } = useAthlete();
   const { data: status } = useSyncStatus();
+  const refreshSync = useRefreshSync();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -55,6 +56,15 @@ export default function AppHome() {
       onLogout={handleLogout}
       title="Overview"
       subtitle="UP TO DATE"
+      headerRight={
+        <button
+          onClick={() => refreshSync.mutate()}
+          disabled={refreshSync.isPending}
+          className="h-[38px] px-4 rounded-[10px] bg-strava text-white font-display font-medium text-[13px] cursor-pointer hover:bg-strava-hover disabled:opacity-60"
+        >
+          Refresh from Strava
+        </button>
+      }
     >
       <div className="h-full overflow-y-auto">
         <SkeletonPanels />

@@ -16,9 +16,11 @@ vi.mock("@/api/auth", () => ({
   disconnect: vi.fn(),
 }));
 
+const refreshMutate = vi.fn();
 const useSyncStatus = vi.fn();
 vi.mock("@/api/sync", () => ({
   useSyncStatus: () => useSyncStatus(),
+  useRefreshSync: () => ({ mutate: refreshMutate, isPending: false }),
 }));
 
 import { disconnect, logout } from "@/api/auth";
@@ -79,5 +81,16 @@ describe("AppHome", () => {
     fireEvent.click(screen.getByRole("button", { name: /disconnect/i }));
     await waitFor(() => expect(disconnect).toHaveBeenCalled());
     await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/", { replace: true }));
+  });
+});
+
+describe("AppHome refresh", () => {
+  it("refreshes from Strava", () => {
+    useAthlete.mockReturnValue({ data: athlete, isLoading: false, error: null });
+    useSyncStatus.mockReturnValue({ data: { status: "idle", progress: 100, synced: 200,
+      last_backfill_at: "T", last_sync_at: "T" } });
+    renderPage();
+    fireEvent.click(screen.getByRole("button", { name: /refresh from strava/i }));
+    expect(refreshMutate).toHaveBeenCalled();
   });
 });
