@@ -7,6 +7,7 @@ import httpx
 AUTHORIZE_URL = "https://www.strava.com/oauth/authorize"
 TOKEN_URL = "https://www.strava.com/oauth/token"
 DEAUTHORIZE_URL = "https://www.strava.com/oauth/deauthorize"
+API_BASE_URL = "https://www.strava.com/api/v3"
 SCOPE = "read,activity:read_all"
 
 
@@ -80,3 +81,25 @@ class StravaClient:
         """Revoke the app's access on Strava; raises on HTTP error."""
         response = self._http.post(DEAUTHORIZE_URL, data={"access_token": access_token})
         response.raise_for_status()
+
+    def list_activities(
+        self,
+        access_token: str,
+        *,
+        page: int = 1,
+        per_page: int = 200,
+        after: int | None = None,
+    ) -> list[dict]:
+        params: dict[str, int] = {"page": page, "per_page": per_page}
+        if after is not None:
+            params["after"] = after
+        response = self._http.get(
+            f"{API_BASE_URL}/athlete/activities",
+            params=params,
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
+        response.raise_for_status()
+        return response.json()
+
+    def close(self) -> None:
+        self._http.close()
