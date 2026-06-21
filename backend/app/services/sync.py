@@ -28,6 +28,7 @@ def _to_activity_row(athlete_id: int, summary: dict) -> dict:
         "name": summary.get("name") or "Untitled",
         "type": summary.get("sport_type") or summary.get("type") or "Workout",
         "start_date": summary["start_date"],
+        "start_date_local": summary.get("start_date_local"),
         "distance_m": summary.get("distance", 0.0),
         "moving_time_s": summary.get("moving_time", 0),
         "elapsed_time_s": summary.get("elapsed_time", 0),
