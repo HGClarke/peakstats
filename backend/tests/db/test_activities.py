@@ -78,3 +78,17 @@ def test_list_recent_activities_orders_desc_and_limits():
     assert seen["params"]["order"] == "start_date.desc"
     assert seen["params"]["limit"] == "5"
     assert rows == [{"id": 9, "athlete_id": 7, "name": "Ride"}]
+
+
+def test_delete_activity_scopes_by_athlete_and_id():
+    seen = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["method"] = request.method
+        seen["params"] = dict(request.url.params)
+        return httpx.Response(204)
+
+    activities.delete_activity(_client(handler), athlete_id=7, activity_id=123)
+    assert seen["method"] == "DELETE"
+    assert seen["params"]["id"] == "eq.123"
+    assert seen["params"]["athlete_id"] == "eq.7"

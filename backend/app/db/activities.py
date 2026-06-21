@@ -74,3 +74,12 @@ def count_activities(client: httpx.Client, athlete_id: int) -> int:
     content_range = response.headers.get("Content-Range", "")
     total = content_range.split("/")[-1]
     return int(total) if total.isdigit() else 0
+
+
+def delete_activity(client: httpx.Client, athlete_id: int, activity_id: int) -> None:
+    response = client.request(
+        "DELETE",
+        "/activities",
+        params={"id": f"eq.{activity_id}", "athlete_id": f"eq.{athlete_id}"},
+    )
+    response.raise_for_status()
