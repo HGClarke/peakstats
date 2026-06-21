@@ -53,3 +53,39 @@ describe("AppHome", () => {
     );
   });
 });
+
+
+import { fireEvent } from "@testing-library/react";
+import { logout, disconnect } from "@/api/auth";
+
+describe("AppHome actions", () => {
+  const loaded = {
+    data: {
+      id: 99, name: "Ada Lovelace", avatar_url: null,
+      settings: { units: "metric", theme: "dark", default_period: "week" },
+    },
+    isLoading: false, error: null,
+  };
+
+  it("logs out then returns to landing", async () => {
+    (logout as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+    useAthlete.mockReturnValue(loaded);
+    renderPage();
+    fireEvent.click(screen.getByRole("button", { name: /log out/i }));
+    await waitFor(() => expect(logout).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(mockNavigate).toHaveBeenCalledWith("/", { replace: true })
+    );
+  });
+
+  it("disconnects then returns to landing", async () => {
+    (disconnect as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+    useAthlete.mockReturnValue(loaded);
+    renderPage();
+    fireEvent.click(screen.getByRole("button", { name: /disconnect/i }));
+    await waitFor(() => expect(disconnect).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(mockNavigate).toHaveBeenCalledWith("/", { replace: true })
+    );
+  });
+});
