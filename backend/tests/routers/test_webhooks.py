@@ -32,8 +32,8 @@ def test_get_challenge_rejects_bad_token(client):
 def test_post_accepts_and_schedules_processing(client, monkeypatch):
     seen = {}
     monkeypatch.setattr(webhooks_service, "process_event",
-                        lambda settings, event: seen.update(owner=event.owner_id,
-                                                            obj=event.object_id))
+                        lambda supabase, settings, event: seen.update(owner=event.owner_id,
+                                                                      obj=event.object_id))
     response = client.post("/webhooks/strava", json={
         "aspect_type": "create", "object_type": "activity", "object_id": 555,
         "owner_id": 7, "subscription_id": 1, "event_time": 1_700_000_000,
@@ -44,7 +44,7 @@ def test_post_accepts_and_schedules_processing(client, monkeypatch):
 
 
 def test_post_ignores_malformed_payload(client, monkeypatch):
-    def fail(settings, event):
+    def fail(supabase, settings, event):
         raise AssertionError("must not schedule processing for malformed payload")
 
     monkeypatch.setattr(webhooks_service, "process_event", fail)

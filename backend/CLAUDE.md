@@ -31,7 +31,7 @@ backend/
   app/
     main.py          # app factory only — no business logic
     config.py        # pydantic-settings; all env vars live here
-    deps.py          # FastAPI dependency injectors (supabase client, current_user, etc.)
+    deps.py          # FastAPI dependency injectors (shared supabase client, current_user, etc.)
     cookies.py       # session/state cookie set+clear helpers (one place for flags)
     session.py       # cookie signing/verification (framework-agnostic; no fastapi)
     strava.py        # Strava OAuth + API client wrapper
@@ -55,9 +55,15 @@ backend/
   Must not contain business logic or direct DB calls.
 - `services/` — all business logic lives here. No `fastapi` imports allowed (use
   plain Python types). Receives dependencies (db client, settings) as arguments.
-- `db/` — typed wrappers around Supabase (sync `httpx`; PostgREST). One module per
+- `db/` — typed wrappers around the **supabase** Python client (sync). One module per
   logical table group (athletes, activities, segments, tokens). No business logic.
-  Each module declares a `TypedDict` for its row shape and returns it (not a raw `dict`).
+  Each module declares a `TypedDict` for its row shape and returns it (cast from the
+  client's `.data`), not a raw `dict`.
+- **Shared supabase client** — the supabase client is a process-wide singleton built in
+  the `app.main` lifespan and stored on `app.state.supabase`; `deps.get_supabase`
+  returns it. Do not build per-request clients, and do not mutate per-request auth on it
+  (thread-safety relies on the single service-role key). Background tasks (sync,
+  webhooks) receive the shared client as an argument.
 - `models/` — Pydantic schemas for request/response bodies. Keep separate from DB
   row shapes (those are the `TypedDict`s in `db/`).
 - `deps.py` — all FastAPI `Depends()` callables. This is the only place that calls

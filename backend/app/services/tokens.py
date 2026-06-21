@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-import httpx
+from supabase import Client
 
 from app.db import tokens as tokens_db
 from app.strava import StravaClient
@@ -9,7 +9,7 @@ REFRESH_BUFFER_S = 60
 
 
 def get_valid_access_token(
-    supabase: httpx.Client,
+    supabase: Client,
     strava: StravaClient,
     athlete_id: int,
     *,

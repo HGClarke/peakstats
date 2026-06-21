@@ -1,5 +1,5 @@
-import httpx
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from supabase import Client
 
 from app.config import Settings, get_settings
 from app.deps import get_current_athlete_id, get_supabase
@@ -12,7 +12,7 @@ router = APIRouter()
 @router.get("/status", response_model=SyncStatusResponse)
 def status(
     athlete_id: int = Depends(get_current_athlete_id),
-    supabase: httpx.Client = Depends(get_supabase),
+    supabase: Client = Depends(get_supabase),
 ) -> SyncStatusResponse:
     return sync_service.get_status(supabase, athlete_id)
 
@@ -21,22 +21,25 @@ def status(
 def start(
     background_tasks: BackgroundTasks,
     athlete_id: int = Depends(get_current_athlete_id),
-    supabase: httpx.Client = Depends(get_supabase),
+    supabase: Client = Depends(get_supabase),
     settings: Settings = Depends(get_settings),
 ) -> SyncStatusResponse:
     result, started = sync_service.start_backfill(supabase, athlete_id)
     if started:
-        background_tasks.add_task(sync_service.run_backfill, settings, athlete_id)
+        background_tasks.add_task(
+            sync_service.run_backfill, supabase, settings, athlete_id
+        )
     return result
 
 
 @router.post("/refresh", response_model=RefreshResponse)
 def refresh(
     athlete_id: int = Depends(get_current_athlete_id),
+    supabase: Client = Depends(get_supabase),
     settings: Settings = Depends(get_settings),
 ) -> RefreshResponse:
     try:
-        return sync_service.refresh(settings, athlete_id)
+        return sync_service.refresh(supabase, settings, athlete_id)
     except sync_service.SyncNotReadyError as exc:
         raise HTTPException(
             status_code=409, detail="Initial sync has not completed yet"

@@ -1,7 +1,7 @@
 from datetime import datetime
 
-import httpx
 from fastapi import APIRouter, Depends, Query
+from supabase import Client
 
 from app.deps import get_current_athlete_id, get_supabase
 from app.models.activities import (
@@ -26,7 +26,7 @@ def list_activities(
     page: int = Query(1, ge=1),
     as_of: datetime | None = None,
     athlete_id: int = Depends(get_current_athlete_id),
-    supabase: httpx.Client = Depends(get_supabase),
+    supabase: Client = Depends(get_supabase),
 ) -> ActivityListResponse:
     return activities_service.list_activities(
         supabase, athlete_id,
@@ -39,6 +39,6 @@ def list_activities(
 def overview(
     tz: str = Query("UTC"),
     athlete_id: int = Depends(get_current_athlete_id),
-    supabase: httpx.Client = Depends(get_supabase),
+    supabase: Client = Depends(get_supabase),
 ) -> OverviewResponse:
     return activities_service.get_overview(supabase, athlete_id, tz=tz)

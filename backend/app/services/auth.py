@@ -1,6 +1,6 @@
 import secrets
 
-import httpx
+from supabase import Client
 
 from app.db import athletes as athletes_db
 from app.db import tokens as tokens_db
@@ -13,7 +13,7 @@ def start_login(strava: StravaClient) -> tuple[str, str]:
     return strava.authorize_url(state), state
 
 
-def handle_callback(code: str, supabase: httpx.Client, strava: StravaClient) -> int:
+def handle_callback(code: str, supabase: Client, strava: StravaClient) -> int:
     """Exchange the OAuth code, upsert athlete and tokens in DB, and return the athlete ID."""
     token = strava.exchange_code(code)
     athlete = token.athlete

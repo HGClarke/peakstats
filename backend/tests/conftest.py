@@ -1,8 +1,19 @@
-import pytest
-from app.config import Settings, get_settings
-from app.deps import get_strava, get_supabase
-from app.main import create_app
-from fastapi.testclient import TestClient
+import os
+
+# The app lifespan builds a real supabase client at startup (create_client, which is
+# I/O-free but rejects empty creds). Give the test process valid-looking creds before
+# importing the app so startup succeeds; the client is never hit because tests override
+# get_supabase below.
+os.environ["SUPABASE_URL"] = os.environ.get("SUPABASE_URL") or "https://test.supabase.co"
+os.environ["SUPABASE_SERVICE_ROLE_KEY"] = (
+    os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or "svc"
+)
+
+import pytest  # noqa: E402
+from app.config import Settings, get_settings  # noqa: E402
+from app.deps import get_strava, get_supabase  # noqa: E402
+from app.main import create_app  # noqa: E402
+from fastapi.testclient import TestClient  # noqa: E402
 
 
 @pytest.fixture

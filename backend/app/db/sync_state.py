@@ -1,8 +1,6 @@
 from typing import TypedDict, cast
 
-import httpx
-
-_MERGE = {"Prefer": "resolution=merge-duplicates"}
+from supabase import Client
 
 
 class SyncStateRow(TypedDict):
@@ -14,22 +12,14 @@ class SyncStateRow(TypedDict):
     last_webhook_event_id: int | None
 
 
-def get_sync_state(client: httpx.Client, athlete_id: int) -> SyncStateRow | None:
-    response = client.get(
-        "/sync_state", params={"athlete_id": f"eq.{athlete_id}", "select": "*"}
+def get_sync_state(client: Client, athlete_id: int) -> SyncStateRow | None:
+    resp = (
+        client.table("sync_state").select("*").eq("athlete_id", athlete_id).execute()
     )
-    response.raise_for_status()
-    rows = response.json()
-    return cast(SyncStateRow, rows[0]) if rows else None
+    return cast(SyncStateRow, resp.data[0]) if resp.data else None
 
 
-def upsert_sync_state(
-    client: httpx.Client, athlete_id: int, fields: dict
-) -> None:
-    response = client.post(
-        "/sync_state",
-        params={"on_conflict": "athlete_id"},
-        headers=_MERGE,
-        json=[{"athlete_id": athlete_id, **fields}],
-    )
-    response.raise_for_status()
+def upsert_sync_state(client: Client, athlete_id: int, fields: dict) -> None:
+    client.table("sync_state").upsert(
+        {"athlete_id": athlete_id, **fields}, on_conflict="athlete_id"
+    ).execute()

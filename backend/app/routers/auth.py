@@ -1,8 +1,8 @@
 import secrets
 
-import httpx
 from fastapi import APIRouter, Depends, Request, Response
 from fastapi.responses import RedirectResponse
+from supabase import Client
 
 from app.config import Settings, get_settings
 from app.cookies import (
@@ -38,7 +38,7 @@ def callback(
     state: str | None = None,
     error: str | None = None,
     settings: Settings = Depends(get_settings),
-    supabase: httpx.Client = Depends(get_supabase),
+    supabase: Client = Depends(get_supabase),
     strava: StravaClient = Depends(get_strava),
 ) -> Response:
     """Handle the Strava OAuth callback: verify CSRF state, exchange code, set session cookie."""

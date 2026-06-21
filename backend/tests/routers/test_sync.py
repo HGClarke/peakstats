@@ -27,7 +27,7 @@ def test_start_schedules_backfill_when_started(client, monkeypatch):
                         lambda supabase, athlete_id: (
                             SyncStatusResponse(status="backfilling", progress=0, synced=0), True))
     monkeypatch.setattr(sync_service, "run_backfill",
-                        lambda settings, athlete_id: spawned.update(athlete=athlete_id))
+                        lambda supabase, settings, athlete_id: spawned.update(athlete=athlete_id))
     _auth(client)
     response = client.post("/sync/start")
     assert response.status_code == 200
@@ -40,7 +40,7 @@ def test_start_does_not_reschedule_when_already_running(client, monkeypatch):
                         lambda supabase, athlete_id: (
                             SyncStatusResponse(status="backfilling", progress=30, synced=5), False))
 
-    def fail(settings, athlete_id):
+    def fail(supabase, settings, athlete_id):
         raise AssertionError("must not spawn a second backfill")
 
     monkeypatch.setattr(sync_service, "run_backfill", fail)
@@ -50,7 +50,7 @@ def test_start_does_not_reschedule_when_already_running(client, monkeypatch):
 
 def test_refresh_returns_count(client, monkeypatch):
     monkeypatch.setattr(sync_service, "refresh",
-                        lambda settings, athlete_id: RefreshResponse(synced=4))
+                        lambda supabase, settings, athlete_id: RefreshResponse(synced=4))
     _auth(client)
     response = client.post("/sync/refresh")
     assert response.status_code == 200
@@ -62,7 +62,7 @@ def test_refresh_requires_session(client):
 
 
 def test_refresh_conflict_when_not_synced(client, monkeypatch):
-    def not_ready(settings, athlete_id):
+    def not_ready(supabase, settings, athlete_id):
         raise sync_service.SyncNotReadyError("no backfill yet")
 
     monkeypatch.setattr(sync_service, "refresh", not_ready)

@@ -1,6 +1,7 @@
 from datetime import UTC, datetime, timedelta
 
 import httpx
+from supabase import Client
 
 from app.db import athletes as athletes_db
 from app.db import tokens as tokens_db
@@ -8,7 +9,7 @@ from app.models.athlete import AthleteResponse
 from app.strava import StravaClient
 
 
-def get_profile(supabase: httpx.Client, athlete_id: int) -> AthleteResponse | None:
+def get_profile(supabase: Client, athlete_id: int) -> AthleteResponse | None:
     """Fetch athlete from the DB and return a response model, or None if not found."""
     row = athletes_db.get_athlete(supabase, athlete_id)
     if row is None:
@@ -21,7 +22,7 @@ def get_profile(supabase: httpx.Client, athlete_id: int) -> AthleteResponse | No
     )
 
 
-def disconnect(supabase: httpx.Client, strava: StravaClient, athlete_id: int) -> None:
+def disconnect(supabase: Client, strava: StravaClient, athlete_id: int) -> None:
     """Revoke Strava access (best-effort) and delete all athlete data from the DB."""
     tokens = tokens_db.get_tokens(supabase, athlete_id)
     if tokens:

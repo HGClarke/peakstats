@@ -1,9 +1,9 @@
 import logging
 from datetime import UTC, datetime
 
-import httpx
+from supabase import Client
 
-from app.clients import build_strava, build_supabase
+from app.clients import build_strava
 from app.config import Settings
 from app.db import activities as activities_db
 from app.db import sync_state as sync_state_db
@@ -39,7 +39,7 @@ def _to_activity_row(athlete_id: int, summary: dict) -> dict:
     }
 
 
-def get_status(supabase: httpx.Client, athlete_id: int) -> SyncStatusResponse:
+def get_status(supabase: Client, athlete_id: int) -> SyncStatusResponse:
     row = sync_state_db.get_sync_state(supabase, athlete_id)
     synced = activities_db.count_activities(supabase, athlete_id)
     if row is None:
@@ -62,7 +62,7 @@ def get_status(supabase: httpx.Client, athlete_id: int) -> SyncStatusResponse:
 
 
 def start_backfill(
-    supabase: httpx.Client, athlete_id: int
+    supabase: Client, athlete_id: int
 ) -> tuple[SyncStatusResponse, bool]:
     row = sync_state_db.get_sync_state(supabase, athlete_id)
     already_running = row is not None and row["status"] == "backfilling"
@@ -73,8 +73,7 @@ def start_backfill(
     return get_status(supabase, athlete_id), not already_running
 
 
-def run_backfill(settings: Settings, athlete_id: int) -> None:
-    supabase = build_supabase(settings)
+def run_backfill(supabase: Client, settings: Settings, athlete_id: int) -> None:
     strava = build_strava(settings)
     try:
         access_token = get_valid_access_token(supabase, strava, athlete_id)
@@ -104,12 +103,10 @@ def run_backfill(settings: Settings, athlete_id: int) -> None:
         logger.exception("Backfill failed for athlete %s", athlete_id)
         sync_state_db.upsert_sync_state(supabase, athlete_id, {"status": "error"})
     finally:
-        supabase.close()
         strava.close()
 
 
-def refresh(settings: Settings, athlete_id: int) -> RefreshResponse:
-    supabase = build_supabase(settings)
+def refresh(supabase: Client, settings: Settings, athlete_id: int) -> RefreshResponse:
     strava = build_strava(settings)
     try:
         access_token = get_valid_access_token(supabase, strava, athlete_id)
@@ -141,5 +138,4 @@ def refresh(settings: Settings, athlete_id: int) -> RefreshResponse:
         )
         return RefreshResponse(synced=count)
     finally:
-        supabase.close()
         strava.close()
