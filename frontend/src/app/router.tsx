@@ -2,6 +2,7 @@ import { createBrowserRouter, type RouteObject } from "react-router";
 import AppHome from "@/pages/app-home/AppHome";
 import LandingPage from "@/pages/landing/LandingPage";
 import NotFoundPage from "@/pages/not-found/NotFoundPage";
+import SyncPage from "@/pages/sync/SyncPage";
 
 /**
  * Route table. Add new pages here, pointing at a `pages/<page>/<Page>.tsx`.
@@ -10,6 +11,7 @@ import NotFoundPage from "@/pages/not-found/NotFoundPage";
 export const routes: RouteObject[] = [
   { path: "/", element: <LandingPage /> },
   { path: "/home", element: <AppHome /> },
+  { path: "/sync", element: <SyncPage /> },
   { path: "*", element: <NotFoundPage /> },
 ];
 
