@@ -1,53 +1,63 @@
 import { render, screen, fireEvent } from "@testing-library/react";
+import { ThemeProvider } from "@/app/providers/ThemeProvider";
 import LandingPage from "./LandingPage";
+
+function renderLandingPage() {
+  return render(
+    <ThemeProvider>
+      <LandingPage />
+    </ThemeProvider>
+  );
+}
 
 beforeEach(() => {
   document.documentElement.classList.remove("dark", "light");
+  localStorage.clear();
 });
 
 it("renders the logo wordmark", () => {
-  render(<LandingPage />);
+  renderLandingPage();
   expect(screen.getByText("peakstats")).toBeInTheDocument();
 });
 
 it("renders the headline", () => {
-  render(<LandingPage />);
+  renderLandingPage();
   expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
     "Make sense of"
   );
 });
 
 it("renders the CTA link pointing to #", () => {
-  render(<LandingPage />);
+  renderLandingPage();
   const cta = screen.getByRole("link", { name: /connect with strava/i });
   expect(cta).toHaveAttribute("href", "#");
 });
 
 it("adds dark class to documentElement on mount", () => {
-  render(<LandingPage />);
+  renderLandingPage();
   expect(document.documentElement.classList.contains("dark")).toBe(true);
 });
 
 it("removes dark class when theme is toggled to light", () => {
-  render(<LandingPage />);
+  renderLandingPage();
   fireEvent.click(screen.getByTitle("Toggle theme"));
   expect(document.documentElement.classList.contains("dark")).toBe(false);
 });
 
 it("re-adds dark class when toggled back", () => {
-  render(<LandingPage />);
+  renderLandingPage();
   fireEvent.click(screen.getByTitle("Toggle theme"));
   fireEvent.click(screen.getByTitle("Toggle theme"));
   expect(document.documentElement.classList.contains("dark")).toBe(true);
 });
 
-it("renders the weekly distance stat", () => {
-  render(<LandingPage />);
-  expect(screen.getByText("142.6")).toBeInTheDocument();
+it("renders the weekly distance stat once data loads", async () => {
+  renderLandingPage();
+  expect(await screen.findByText("142.6")).toBeInTheDocument();
 });
 
-it("renders both recent ride names", () => {
-  render(<LandingPage />);
-  expect(screen.getByText("Morning commute")).toBeInTheDocument();
+it("renders both recent ride names once data loads", async () => {
+  renderLandingPage();
+  expect(await screen.findByText("Morning commute")).toBeInTheDocument();
   expect(screen.getByText("River loop")).toBeInTheDocument();
 });
