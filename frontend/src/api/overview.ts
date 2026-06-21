@@ -19,7 +19,7 @@ function toRide(r: RecentRideDTO): DashRide {
   return {
     id: r.id,
     name: r.name,
-    meta: `${fmtDate(r.start_date)} · ${r.type}`,
+    meta: `${fmtDate(r.start_date_local ?? r.start_date)} · ${r.type}`,
     distLabel: `${(r.distance_m / 1000).toFixed(1)} km`,
     durLabel: fmtDuration(r.moving_time_s),
   };
@@ -67,7 +67,10 @@ export function toOverview(dto: OverviewDTO): DashboardOverview {
 }
 
 export function fetchOverview(): Promise<DashboardOverview> {
-  return apiFetch<OverviewDTO>("/activities/overview").then(toOverview);
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  return apiFetch<OverviewDTO>(
+    `/activities/overview?tz=${encodeURIComponent(tz)}`,
+  ).then(toOverview);
 }
 
 export const OVERVIEW_REFETCH_INTERVAL_MS = 60_000;

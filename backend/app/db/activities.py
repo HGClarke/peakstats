@@ -11,6 +11,7 @@ class ActivityRow(TypedDict):
     name: str
     type: str
     start_date: str
+    start_date_local: str | None
     distance_m: float
     moving_time_s: int
     elapsed_time_s: int

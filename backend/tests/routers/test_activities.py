@@ -36,7 +36,7 @@ def test_overview_requires_session(client):
 
 def test_overview_returns_body(client, monkeypatch):
     monkeypatch.setattr(activities_service, "get_overview",
-                        lambda supabase, athlete_id: _overview())
+                        lambda supabase, athlete_id, tz="UTC": _overview())
     _auth(client)
     response = client.get("/activities/overview")
     assert response.status_code == 200
@@ -44,6 +44,20 @@ def test_overview_returns_body(client, monkeypatch):
     assert body["this_week"]["distance_m"] == 30000.0
     assert len(body["week"]) == 7
     assert body["recent_rides"][0]["name"] == "Tue ride"
+
+
+def test_overview_forwards_tz(client, monkeypatch):
+    seen = {}
+
+    def fake(supabase, athlete_id, tz="UTC"):
+        seen["tz"] = tz
+        return _overview()
+
+    monkeypatch.setattr(activities_service, "get_overview", fake)
+    _auth(client)
+    response = client.get("/activities/overview?tz=America/Los_Angeles")
+    assert response.status_code == 200
+    assert seen["tz"] == "America/Los_Angeles"
 
 
 def _list_response() -> ActivityListResponse:

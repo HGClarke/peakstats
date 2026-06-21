@@ -37,7 +37,8 @@ def list_activities(
 
 @router.get("/overview", response_model=OverviewResponse)
 def overview(
+    tz: str = Query("UTC"),
     athlete_id: int = Depends(get_current_athlete_id),
     supabase: httpx.Client = Depends(get_supabase),
 ) -> OverviewResponse:
-    return activities_service.get_overview(supabase, athlete_id)
+    return activities_service.get_overview(supabase, athlete_id, tz=tz)

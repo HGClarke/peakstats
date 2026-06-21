@@ -24,6 +24,7 @@ class RecentRideItem(BaseModel):
     name: str
     type: str
     start_date: str
+    start_date_local: str | None = None
     distance_m: float
     moving_time_s: int
 

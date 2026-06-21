@@ -1,5 +1,6 @@
 from datetime import UTC, datetime, timedelta
 from math import ceil
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import httpx
 
@@ -29,8 +30,22 @@ _SORT_COLUMNS: dict[SortField, str] = {
 _WEEKDAY_LABELS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
 
 
-def _parse(start_date: str) -> datetime:
-    return datetime.fromisoformat(start_date).astimezone(UTC)
+def _resolve_tz(tz: str) -> ZoneInfo:
+    try:
+        return ZoneInfo(tz)
+    except (ZoneInfoNotFoundError, ValueError):
+        return ZoneInfo("UTC")
+
+
+def _local_naive(row: ActivityRow) -> datetime:
+    """Wall-clock datetime used for day bucketing and week membership.
+
+    Uses Strava's per-ride start_date_local; falls back to UTC start_date for
+    legacy rows. The value is a wall-clock label — it is intentionally NOT
+    timezone-converted (we drop the tzinfo and compare numerals directly).
+    """
+    raw = row.get("start_date_local") or row["start_date"]
+    return datetime.fromisoformat(raw).replace(tzinfo=None)
 
 
 def _totals(rows: list[ActivityRow]) -> WeekTotals:
@@ -45,28 +60,36 @@ def _totals(rows: list[ActivityRow]) -> WeekTotals:
 
 
 def get_overview(
-    supabase: httpx.Client, athlete_id: int, now: datetime | None = None
+    supabase: httpx.Client,
+    athlete_id: int,
+    tz: str = "UTC",
+    now: datetime | None = None,
 ) -> OverviewResponse:
-    now = (now or datetime.now(UTC)).astimezone(UTC)
-    this_monday = (now - timedelta(days=now.weekday())).replace(
-        hour=0, minute=0, second=0, microsecond=0
-    )
+    zone = _resolve_tz(tz)
+    now_local = (now or datetime.now(UTC)).astimezone(zone)
+    this_monday = (
+        now_local - timedelta(days=now_local.weekday())
+    ).replace(hour=0, minute=0, second=0, microsecond=0)
     last_monday = this_monday - timedelta(days=7)
 
+    # Rows are fetched by UTC start_date, which can sit up to ~14h off the local
+    # date, so widen the query a day and filter precisely by local time below.
     rows = activities_db.list_activities_since(
-        supabase, athlete_id, last_monday.isoformat()
+        supabase, athlete_id, (last_monday - timedelta(days=1)).isoformat()
     )
 
-    this_week = [r for r in rows if _parse(r["start_date"]) >= this_monday]
+    this_monday_naive = this_monday.replace(tzinfo=None)
+    last_monday_naive = last_monday.replace(tzinfo=None)
+
+    this_week = [r for r in rows if _local_naive(r) >= this_monday_naive]
     last_week = [
-        r
-        for r in rows
-        if last_monday <= _parse(r["start_date"]) < this_monday
+        r for r in rows
+        if last_monday_naive <= _local_naive(r) < this_monday_naive
     ]
 
     km_by_day = [0.0] * 7
     for r in this_week:
-        km_by_day[_parse(r["start_date"]).weekday()] += r["distance_m"] / 1000
+        km_by_day[_local_naive(r).weekday()] += r["distance_m"] / 1000
     week = [
         WeekDay(day=label, km=round(km_by_day[i], 1))
         for i, label in enumerate(_WEEKDAY_LABELS)
@@ -79,6 +102,7 @@ def get_overview(
             name=r["name"],
             type=r["type"],
             start_date=r["start_date"],
+            start_date_local=r.get("start_date_local"),
             distance_m=r["distance_m"],
             moving_time_s=r["moving_time_s"],
         )

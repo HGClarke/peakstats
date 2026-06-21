@@ -233,3 +233,23 @@ def test_refresh_pulls_since_last_sync(monkeypatch):
     assert captured["after"] is not None
     assert "status" not in final_fields
     assert final_fields["last_sync_at"]
+
+
+def test_to_activity_row_stores_start_date_local():
+    row = sync_service._to_activity_row(7, {
+        "id": 9, "name": "Evening spin", "type": "Ride",
+        "start_date": "2026-06-21T05:00:00Z",
+        "start_date_local": "2026-06-20T22:00:00Z",
+        "distance": 1000.0, "moving_time": 100, "elapsed_time": 100,
+        "total_elevation_gain": 0.0,
+    })
+    assert row["start_date_local"] == "2026-06-20T22:00:00Z"
+
+
+def test_to_activity_row_start_date_local_missing_is_none():
+    row = sync_service._to_activity_row(7, {
+        "id": 1, "name": "Spin", "type": "Workout",
+        "start_date": "2026-06-15T08:00:00Z", "distance": 0.0,
+        "moving_time": 10, "elapsed_time": 10, "total_elevation_gain": 0.0,
+    })
+    assert row["start_date_local"] is None

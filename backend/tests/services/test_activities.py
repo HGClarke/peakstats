@@ -131,3 +131,64 @@ def test_list_defaults_as_of_to_now(monkeypatch):
     assert cap["as_of"]  # an ISO timestamp was passed through
     assert resp.total_pages == 1  # max(1, ceil(0 / 9))
     assert resp.as_of is not None
+
+
+def test_overview_buckets_by_local_day_not_utc(monkeypatch):
+    # 11pm Sat 2026-06-20 in LA == 2026-06-21T06:00:00Z (Sun UTC).
+    # Local time must place it on Saturday, not Sunday.
+    ride = {
+        "id": 50, "athlete_id": 7, "name": "Late ride", "type": "Ride",
+        "start_date": "2026-06-21T06:00:00Z",
+        "start_date_local": "2026-06-20T23:00:00Z",
+        "distance_m": 12000.0, "moving_time_s": 1200, "elapsed_time_s": 1200,
+        "elev_gain_m": 0.0, "avg_speed_ms": 10.0, "avg_hr": None,
+        "summary_polyline": None,
+    }
+    _patch(monkeypatch, [ride], [])
+    ov = activities_service.get_overview(
+        object(), 7, tz="America/Los_Angeles", now=NOW
+    )
+    km = {w.day: w.km for w in ov.week}
+    assert km["SAT"] == 12.0
+    assert km["SUN"] == 0.0
+
+
+def test_overview_window_uses_tz(monkeypatch):
+    # A ride at 2026-06-15T02:00:00Z is Mon 02:00 UTC, but Sun 19:00 in LA —
+    # i.e. last week in LA, this week in UTC.
+    ride = {
+        "id": 60, "athlete_id": 7, "name": "Boundary", "type": "Ride",
+        "start_date": "2026-06-15T02:00:00Z",
+        "start_date_local": "2026-06-14T19:00:00Z",
+        "distance_m": 5000.0, "moving_time_s": 500, "elapsed_time_s": 500,
+        "elev_gain_m": 0.0, "avg_speed_ms": 10.0, "avg_hr": None,
+        "summary_polyline": None,
+    }
+    _patch(monkeypatch, [ride], [])
+    ov = activities_service.get_overview(
+        object(), 7, tz="America/Los_Angeles", now=NOW
+    )
+    assert ov.this_week.distance_m == 0.0
+    assert ov.last_week.distance_m == 5000.0
+
+
+def test_overview_invalid_tz_falls_back_to_utc(monkeypatch):
+    _patch(monkeypatch, THIS_WEEK + LAST_WEEK, [])
+    ov = activities_service.get_overview(object(), 7, tz="Not/AZone", now=NOW)
+    # Same result as the existing UTC-default aggregation test.
+    assert ov.this_week.distance_m == 30000.0
+    assert ov.last_week.distance_m == 5000.0
+
+
+def test_overview_recent_ride_exposes_start_date_local(monkeypatch):
+    ride = {
+        "id": 70, "athlete_id": 7, "name": "Has local", "type": "Ride",
+        "start_date": "2026-06-21T06:00:00Z",
+        "start_date_local": "2026-06-20T23:00:00Z",
+        "distance_m": 1000.0, "moving_time_s": 100, "elapsed_time_s": 100,
+        "elev_gain_m": 0.0, "avg_speed_ms": 10.0, "avg_hr": None,
+        "summary_polyline": None,
+    }
+    _patch(monkeypatch, [], [ride])
+    ov = activities_service.get_overview(object(), 7, now=NOW)
+    assert ov.recent_rides[0].start_date_local == "2026-06-20T23:00:00Z"
