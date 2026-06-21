@@ -1,6 +1,6 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "@/test/providers";
 
 const mockNavigate = vi.fn();
@@ -23,8 +23,32 @@ vi.mock("@/api/sync", () => ({
   useRefreshSync: () => ({ mutate: refreshMutate, isPending: false }),
 }));
 
+const useOverview = vi.fn();
+vi.mock("@/api/overview", () => ({
+  useOverview: () => useOverview(),
+}));
+
 import { disconnect, logout } from "@/api/auth";
+import type { DashboardOverview } from "@/types/overview";
 import AppHome from "./AppHome";
+
+const overview: DashboardOverview = {
+  kpis: [
+    { label: "DISTANCE", value: "30.0", unit: "km", delta: "+20%", deltaPositive: true },
+    { label: "MOVING TIME", value: "6h 12m", unit: "", delta: "+12%", deltaPositive: true },
+    { label: "ELEVATION", value: "1,240", unit: "m", delta: "+3%", deltaPositive: true },
+    { label: "AVG SPEED", value: "24.8", unit: "km/h", delta: "+15%", deltaPositive: true },
+  ],
+  week: [{ day: "MON", km: 14.8 }],
+  recentRides: [
+    { id: 1, name: "River loop", meta: "Tue · Jun 16 · Ride", distLabel: "38.7 km", durLabel: "1h 34m" },
+  ],
+};
+
+const syncedStatus = {
+  status: "idle", progress: 100, synced: 200,
+  last_backfill_at: "T", last_sync_at: "T",
+};
 
 const athlete = {
   id: 99, name: "Ada Lovelace", avatar_url: null,
@@ -35,6 +59,9 @@ function renderPage() {
   renderWithProviders(<MemoryRouter><AppHome /></MemoryRouter>);
 }
 
+beforeEach(() => {
+  useOverview.mockReturnValue({ data: overview, isLoading: false, error: null });
+});
 afterEach(() => vi.clearAllMocks());
 
 describe("AppHome", () => {
@@ -84,13 +111,40 @@ describe("AppHome", () => {
   });
 });
 
+describe("AppHome overview", () => {
+  it("renders the KPIs and recent rides when loaded", () => {
+    useAthlete.mockReturnValue({ data: athlete, isLoading: false, error: null });
+    useSyncStatus.mockReturnValue({ data: syncedStatus });
+    renderPage();
+    expect(screen.getByText("DISTANCE")).toBeInTheDocument();
+    expect(screen.getByText("30.0")).toBeInTheDocument();
+    expect(screen.getByText("River loop")).toBeInTheDocument();
+  });
+
+  it("shows skeletons while the overview is loading", () => {
+    useAthlete.mockReturnValue({ data: athlete, isLoading: false, error: null });
+    useSyncStatus.mockReturnValue({ data: syncedStatus });
+    useOverview.mockReturnValue({ data: undefined, isLoading: true, error: null });
+    renderPage();
+    expect(screen.queryByText("DISTANCE")).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/loading overview/i)).toBeInTheDocument();
+  });
+});
+
 describe("AppHome refresh", () => {
   it("refreshes from Strava", () => {
     useAthlete.mockReturnValue({ data: athlete, isLoading: false, error: null });
-    useSyncStatus.mockReturnValue({ data: { status: "idle", progress: 100, synced: 200,
-      last_backfill_at: "T", last_sync_at: "T" } });
+    useSyncStatus.mockReturnValue({ data: syncedStatus });
     renderPage();
     fireEvent.click(screen.getByRole("button", { name: /refresh from strava/i }));
     expect(refreshMutate).toHaveBeenCalled();
+  });
+
+  it("disables refresh until the initial sync has completed", () => {
+    useAthlete.mockReturnValue({ data: athlete, isLoading: false, error: null });
+    useSyncStatus.mockReturnValue({ data: { status: "backfilling", progress: 40, synced: 5,
+      last_backfill_at: null, last_sync_at: null } });
+    renderPage();
+    expect(screen.getByRole("button", { name: /refresh from strava/i })).toBeDisabled();
   });
 });

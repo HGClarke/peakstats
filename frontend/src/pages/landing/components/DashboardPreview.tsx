@@ -4,7 +4,7 @@ import { useWeeklySummary } from "@/api/weekly-summary";
 import { StatTiles } from "./StatTiles";
 import { RecentRides } from "./RecentRides";
 
-const WeekChart = lazy(() => import("./WeekChart"));
+const WeekChart = lazy(() => import("@/components/WeekChart"));
 
 const CARD_CLASS =
   "bg-surface-card border border-line rounded-[18px] p-[22px] shadow-[0_24px_60px_rgba(0,0,0,0.10)] dark:shadow-[0_30px_70px_rgba(0,0,0,0.45)] transition-colors duration-300";
