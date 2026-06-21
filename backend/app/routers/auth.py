@@ -52,7 +52,7 @@ def callback(
         return RedirectResponse(f"{settings.frontend_origin}/?auth=error", status_code=302)
 
     athlete_id = auth_service.handle_callback(code, supabase, strava)
-    response = RedirectResponse(f"{settings.frontend_origin}/app", status_code=302)
+    response = RedirectResponse(f"{settings.frontend_origin}/home", status_code=302)
     _set_cookie(
         response,
         SESSION_COOKIE,

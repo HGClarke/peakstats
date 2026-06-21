@@ -9,7 +9,7 @@ import NotFoundPage from "@/pages/not-found/NotFoundPage";
  */
 export const routes: RouteObject[] = [
   { path: "/", element: <LandingPage /> },
-  { path: "/app", element: <AppHome /> },
+  { path: "/home", element: <AppHome /> },
   { path: "*", element: <NotFoundPage /> },
 ];
 

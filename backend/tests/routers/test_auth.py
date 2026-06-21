@@ -21,7 +21,7 @@ def test_callback_valid_state_sets_session_and_redirects(client, monkeypatch):
         "/auth/strava/callback?code=thecode&state=abc123", follow_redirects=False
     )
     assert response.status_code == 302
-    assert response.headers["location"] == "http://localhost:5173/app"
+    assert response.headers["location"] == "http://localhost:5173/home"
     assert read_session(response.cookies[SESSION_COOKIE], "test-secret") == 99
 
 
