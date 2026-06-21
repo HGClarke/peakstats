@@ -42,8 +42,8 @@ completes the user lands on a **minimal Overview shell** that those phases fill 
   stores **summary** fields only; `calories`, `splits_metric`, `detail_fetched_at` null.
 - Real Dashboard data surfaces (Overview KPIs/chart/recent/PRs, Activities, Trends,
   Segments, detail views) — Phases 4–6. Phase 3a ships only a minimal Overview shell.
-- The design's "Go to dashboard" button and "Continue in background" affordance, and the
-  "banner" sync layout — see Sync screen below.
+- The design's "Continue in background" affordance and the "banner" sync layout — see
+  Sync screen below. (The "Go to dashboard" button is kept.)
 
 ## Key decisions
 
@@ -68,10 +68,11 @@ completes the user lands on a **minimal Overview shell** that those phases fill 
    used by both `/sync` and `/home` (and Phases 4–6).
 7. **Sync screen:** port the **overlay** layout (full-screen "Importing your rides" card
    over a blurred skeleton dashboard) — not the "banner" layout, since there is no real
-   dashboard to sit behind it yet. **Drop the "Go to dashboard" button and "Continue in
-   background" affordance**; on completion the screen **auto-navigates to `/home`**. Keep
-   the progress, staged checklist, `ready`, and `empty` (no rides → "Refresh from
-   Strava" / "Skip") states.
+   dashboard to sit behind it yet. On completion show the `ready` ("You're all set") state
+   with the **"Go to dashboard" button** that navigates to `/home`. **Drop only the
+   "Continue in background" affordance** (no dashboard to continue into yet). Keep the
+   progress, staged checklist, `ready`, and `empty` (no rides → "Refresh from Strava" /
+   "Skip") states.
 
 ## Architecture & data flow
 
@@ -81,7 +82,7 @@ First connect:
   /home ──GET /sync/status──► "never_synced" ──► redirect to /sync
   /sync (mount) ──POST /sync/start──► sets status='backfilling', spawns bg task, returns
         └─poll GET /sync/status (while 'backfilling')──► {status, progress, synced}
-        └─on 'idle'/done ──► auto-navigate to /home   (no manual button)
+        └─on 'idle'/done ──► show "You're all set" + "Go to dashboard" button ──► /home
 
 Background task (in web process, builds its OWN short-lived clients):
   get valid access token (refresh if expiring)
@@ -228,9 +229,10 @@ co-located tests; react-router for navigation). Faithful port of the vendored de
 - **`pages/sync/SyncPage.tsx`** (+ test, new) — the overlay sync experience inside
   `AppShell`: "Connected to Strava" card header, big percentage, progress bar with
   shimmer, the 4-stage checklist, over a blurred skeleton dashboard. On mount triggers
-  `startSync`, then reads `useSyncStatus`. **Auto-navigates to `/home` when done** (no
-  button). `empty` state → "Refresh from Strava" + "Skip" (Skip → `/home`). `error` state
-  → retry (re-runs `startSync`). Route `/sync`.
+  `startSync`, then reads `useSyncStatus`. On done shows the `ready` ("You're all set")
+  state with a **"Go to dashboard" button → `/home`**. `empty` state → "Refresh from
+  Strava" + "Skip" (Skip → `/home`). `error` state → retry (re-runs `startSync`). Route
+  `/sync`.
 - **`pages/app-home/`** (modify → Overview shell) — `AppHome` renders inside `AppShell`
   with a minimal **Overview**: real athlete (from `useAthlete`) and sync state, a
   "Refresh from Strava" action (`useRefreshSync`), and placeholder/skeleton blocks for the
@@ -259,7 +261,7 @@ co-located tests; react-router for navigation). Faithful port of the vendored de
   `QueryClientProvider`+`ThemeProvider` test helper):** landing re-port (existing tests
   green under new tokens); `useAthlete` migration; `AppShell`/`Sidebar`/`Topbar`;
   `api/sync` (credentials + methods); `useSyncStatus` (polls while `backfilling`, stops
-  otherwise); `SyncPage` (progress render, empty/error states, auto-navigate on done);
+  otherwise); `SyncPage` (progress render, empty/error states, "Go to dashboard" on done);
   `AppHome` (redirect to `/sync` when `never_synced`, Refresh button). `npm test && npm
   run lint && npm run build` must pass.
 
@@ -278,7 +280,8 @@ co-located tests; react-router for navigation). Faithful port of the vendored de
    logout/disconnect) with tests.
 5. **Sync screen** — `types/sync`, `api/sync` (`useSyncStatus` + `useStartSync`),
    `pages/sync/SyncPage` (overlay, in shell), `/sync` route, `/home` redirect when
-   `never_synced`, auto-navigate on done. Verify against the running backend.
+   `never_synced`, "Go to dashboard" button on done → `/home`. Verify against the running
+   backend.
 6. **Minimal /home Overview shell** — `AppHome` rebuilt inside `AppShell` with the minimal
    Overview (real athlete + sync state, placeholders).
 7. **Manual refresh** — `services.sync.refresh` + `POST /sync/refresh` (backend) +
