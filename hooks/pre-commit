@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+#
+# Pre-commit hook: lint + type-check the backend before allowing a commit.
+#
+# Enable once per clone with:
+#     git config core.hooksPath hooks
+#
+# Runs ruff and mypy (fast, deterministic). The full pytest suite is left to CI
+# so commits aren't blocked on the whole suite. Skips entirely when no backend
+# files are staged. Run with SKIP_HOOKS=1 git commit ... to bypass in a pinch.
+set -euo pipefail
+
+if [ "${SKIP_HOOKS:-}" = "1" ]; then
+    exit 0
+fi
+
+repo_root="$(git rev-parse --show-toplevel)"
+backend="$repo_root/backend"
+
+# Only run when staged changes touch the backend.
+if ! git diff --cached --name-only --diff-filter=ACM | grep -q '^backend/'; then
+    exit 0
+fi
+
+py="$backend/.venv/bin/python"
+if [ ! -x "$py" ]; then
+    echo "pre-commit: $py not found." >&2
+    echo "  Create the venv and run: pip install -r backend/requirements-dev.txt" >&2
+    exit 1
+fi
+
+echo "pre-commit: ruff check"
+( cd "$backend" && "$py" -m ruff check . )
+
+echo "pre-commit: mypy"
+( cd "$backend" && "$py" -m mypy )
+
+echo "pre-commit: ok"

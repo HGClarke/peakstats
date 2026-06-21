@@ -20,6 +20,10 @@ mypy                                 # type-check app/ and tests/
 Production installs only `requirements.txt` (see `render.yaml`); dev/CI tooling
 lives in `requirements-dev.txt`. Tool config (ruff, mypy) is in `pyproject.toml`.
 
+A repo-root `hooks/pre-commit` runs ruff + mypy on the backend before each commit
+(pytest is left to CI). Enable it once per clone with `git config core.hooksPath hooks`;
+bypass in a pinch with `SKIP_HOOKS=1 git commit ...`.
+
 ## Folder structure
 
 ```
