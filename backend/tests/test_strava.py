@@ -101,3 +101,48 @@ def test_get_activity_sends_bearer_and_path():
     activity = _client(handler).get_activity("AT", 12345)
     assert activity["id"] == 12345
     assert activity["name"] == "Evening ride"
+
+
+def test_create_push_subscription_posts_app_credentials():
+    seen = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["path"] = request.url.path
+        seen["body"] = dict(httpx.QueryParams(request.content.decode()))
+        return httpx.Response(201, json={"id": 42})
+
+    sub_id = _client(handler).create_push_subscription(
+        "https://api.example.com/webhooks/strava", "VT"
+    )
+    assert sub_id == 42
+    assert seen["path"] == "/api/v3/push_subscriptions"
+    assert seen["body"]["client_id"] == "cid"
+    assert seen["body"]["client_secret"] == "secret"
+    assert seen["body"]["callback_url"] == "https://api.example.com/webhooks/strava"
+    assert seen["body"]["verify_token"] == "VT"
+
+
+def test_list_push_subscriptions_sends_app_credentials():
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/api/v3/push_subscriptions"
+        assert request.url.params["client_id"] == "cid"
+        assert request.url.params["client_secret"] == "secret"
+        return httpx.Response(200, json=[{"id": 42}])
+
+    assert _client(handler).list_push_subscriptions() == [{"id": 42}]
+
+
+def test_delete_push_subscription_targets_id_with_credentials():
+    seen = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["method"] = request.method
+        seen["path"] = request.url.path
+        seen["params"] = dict(request.url.params)
+        return httpx.Response(204)
+
+    _client(handler).delete_push_subscription(42)
+    assert seen["method"] == "DELETE"
+    assert seen["path"] == "/api/v3/push_subscriptions/42"
+    assert seen["params"]["client_id"] == "cid"
+    assert seen["params"]["client_secret"] == "secret"
