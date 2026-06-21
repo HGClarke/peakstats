@@ -34,8 +34,8 @@ frontend screen + tests, implemented and verified before the next increment. Tre
 
 - **km/mi unit toggle** — the app is metric-only today (Overview hardcodes km). Full
   unit conversion is Phase 7. This slice displays and filters in **metric** (km, m, min).
-- **PR badge on rows** — no segment/PR data exists yet and `is_pr` is not in the
-  `activities` schema (Phase 6).
+- **PR badge on rows** — `is_pr` exists in the `activities` schema but is never
+  populated yet (always `false`); PR/segment derivation is Phase 6.
 - **Row → ride detail navigation** — the ride detail screen is Phase 6.4. Rows render
   the `›` chevron for visual fidelity but are **non-interactive** (no click handler, no
   pointer cursor). Phase 6.4 wires the click to `/activities/:id` in one change.
