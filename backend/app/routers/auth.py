@@ -62,3 +62,15 @@ def callback(
     )
     response.delete_cookie(STATE_COOKIE, path="/")
     return response
+
+
+@router.post("/logout", status_code=204)
+def logout(settings: Settings = Depends(get_settings)) -> Response:
+    response = Response(status_code=204)
+    response.delete_cookie(
+        SESSION_COOKIE,
+        path="/",
+        secure=settings.session_cookie_secure,
+        samesite=settings.session_cookie_samesite,
+    )
+    return response

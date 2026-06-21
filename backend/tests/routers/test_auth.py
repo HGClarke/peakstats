@@ -44,3 +44,9 @@ def test_callback_strava_error_redirects_to_error(client):
     )
     assert response.status_code == 302
     assert response.headers["location"] == "http://localhost:5173/?auth=error"
+
+
+def test_logout_clears_session_cookie(client):
+    response = client.post("/auth/logout")
+    assert response.status_code == 204
+    assert "ps_session=" in response.headers.get("set-cookie", "")

@@ -33,3 +33,18 @@ def test_athlete_404_when_profile_missing(client, monkeypatch):
                         lambda supabase, athlete_id: None)
     client.cookies.set(SESSION_COOKIE, sign_session(99, "test-secret"))
     assert client.get("/athlete").status_code == 404
+
+
+def test_disconnect_requires_session(client):
+    assert client.delete("/athlete/connection").status_code == 401
+
+
+def test_disconnect_calls_service_and_clears_cookie(client, monkeypatch):
+    called = {}
+    monkeypatch.setattr(athletes_service, "disconnect",
+                        lambda supabase, strava, athlete_id: called.update(id=athlete_id))
+    client.cookies.set(SESSION_COOKIE, sign_session(99, "test-secret"))
+    response = client.delete("/athlete/connection")
+    assert response.status_code == 204
+    assert called["id"] == 99
+    assert "ps_session=" in response.headers.get("set-cookie", "")
