@@ -1,4 +1,5 @@
 import { render, screen, fireEvent } from "@testing-library/react";
+import { stravaLoginUrl } from "@/api/auth";
 import { ThemeProvider } from "@/app/providers/ThemeProvider";
 import LandingPage from "./LandingPage";
 
@@ -27,10 +28,10 @@ it("renders the headline", () => {
   );
 });
 
-it("renders the CTA link pointing to #", () => {
+it("renders the CTA link pointing to the Strava login URL", () => {
   renderLandingPage();
   const cta = screen.getByRole("link", { name: /connect with strava/i });
-  expect(cta).toHaveAttribute("href", "#");
+  expect(cta).toHaveAttribute("href", stravaLoginUrl);
 });
 
 it("adds dark class to documentElement on mount", () => {
