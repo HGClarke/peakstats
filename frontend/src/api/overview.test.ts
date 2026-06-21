@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { OverviewDTO } from "@/types/overview";
-import { toOverview } from "./overview";
+import { toOverview, overviewQueryOptions, OVERVIEW_REFETCH_INTERVAL_MS } from "./overview";
 
 const DTO: OverviewDTO = {
   this_week: {
@@ -77,5 +77,14 @@ describe("toOverview", () => {
       distLabel: "38.7 km",
       durLabel: "1h 34m",
     });
+  });
+});
+
+describe("overviewQueryOptions", () => {
+  it("refetches on window focus and on a 60s interval", () => {
+    const opts = overviewQueryOptions();
+    expect(opts.refetchOnWindowFocus).toBe(true);
+    expect(opts.refetchInterval).toBe(OVERVIEW_REFETCH_INTERVAL_MS);
+    expect(OVERVIEW_REFETCH_INTERVAL_MS).toBe(60_000);
   });
 });

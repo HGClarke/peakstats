@@ -86,9 +86,17 @@ export function fetchOverview(): Promise<DashboardOverview> {
   return apiFetch<OverviewDTO>("/activities/overview").then(toOverview);
 }
 
-export function useOverview() {
-  return useQuery({
-    queryKey: ["activities", "overview"],
+export const OVERVIEW_REFETCH_INTERVAL_MS = 60_000;
+
+export function overviewQueryOptions() {
+  return {
+    queryKey: ["activities", "overview"] as const,
     queryFn: fetchOverview,
-  });
+    refetchOnWindowFocus: true,
+    refetchInterval: OVERVIEW_REFETCH_INTERVAL_MS,
+  };
+}
+
+export function useOverview() {
+  return useQuery(overviewQueryOptions());
 }
