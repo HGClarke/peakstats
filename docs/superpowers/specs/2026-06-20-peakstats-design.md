@@ -94,7 +94,16 @@ before any Strava call when `expires_at` is near, storing the new tokens.
 `/athlete/activities`, storing summaries. Detailed fetches (splits, segment efforts,
 streams) are **lazy** — performed on ride-detail open — to respect rate limits
 (200 req / 15 min, 2000 / day). `sync_state.progress` is updated as pages load; the
-SPA polls `GET /sync/status`.
+SPA polls `GET /sync/status` to track progress for the backfill screen.
+
+**Real-time activity updates.** After the initial backfill, new activities arrive via
+Strava webhooks (`POST /webhooks/strava`). Once the backend ingests a new or updated
+activity, it pushes a notification to the connected frontend over a WebSocket
+(`WS /ws/updates`). The SPA listens on this socket and invalidates the relevant
+TanStack Query caches (overview, activities list) so the dashboard refreshes
+automatically without a manual reload. The WebSocket carries lightweight event frames
+(`{type: "activity_synced", activity_id}`) — the client re-fetches full data via the
+normal REST endpoints.
 
 **Webhooks.** Subscribe to Strava push subscriptions. `POST /webhooks/strava`
 receives create/update/delete events; on create/update the backend fetches that one
@@ -126,7 +135,8 @@ then computes `is_best`/PR per athlete+segment.
 | `GET /segments?q=&sort=` | Segment list |
 | `GET /segments/{id}` | Segment detail: PR + all attempts |
 | `POST /sync/refresh` | Manual incremental sync |
-| `GET /sync/status` | Backfill/sync progress |
+| `GET /sync/status` | Backfill progress (polled during initial sync) |
+| `WS /ws/updates` | Real-time activity notifications (WebSocket push, post-backfill) |
 | `POST /webhooks/strava` · `GET /webhooks/strava` | Webhook ingest + subscription verify |
 
 - KPI deltas and trend buckets are computed server-side via SQL aggregation (period
@@ -189,9 +199,9 @@ its own increment, built and verified before moving on.
    3. Logout + `DELETE /athlete/connection`.
 3. **Sync pipeline**
    1. Backfill worker + `sync_state` + `GET /sync/status` (backend).
-   2. Sync/backfill screen wired to real progress (frontend).
+   2. Sync/backfill screen wired to real progress via polling (frontend).
    3. Manual refresh (`POST /sync/refresh` + button).
-   4. Webhook subscribe + ingest.
+   4. Webhook subscribe + ingest + `WS /ws/updates` push to connected clients.
 4. **Overview**
    1. `GET /athlete/stats/overview` aggregation (backend).
    2. KPI cards + deltas (frontend).
@@ -222,6 +232,59 @@ its own increment, built and verified before moving on.
   (the math matters).
 - **Security:** Supabase RLS so an athlete reads only their own rows; tokens never
   leave the server; webhook signature/verify-token check.
+
+## Beyond v1 — Planned enhancements
+
+These features are not part of the v1 build phasing above. Each will get its own
+implementation plan when scheduled. Grouped by theme.
+
+### Analytics depth
+
+- **Power curve** — plot best power output for every duration (5 s → 60 min),
+  recalculated after each sync. Requires power data from the activity payload
+  (`average_watts`, streams). Exposed as `GET /athlete/power-curve`.
+- **Fitness & fatigue model** — rolling ATL (acute training load), CTL (chronic
+  training load), and TSB (form) chart. Computed from daily TSS values server-side;
+  displayed as an overlay on the trends screen. New endpoint:
+  `GET /athlete/fitness?period=`.
+- **Climb catalogue** — auto-detect and categorise climbs (HC / 1 / 2 / 3 / 4) from
+  elevation streams attached to detailed activity payloads. Stored in a `climbs` table;
+  browsable separately from Strava segments.
+- **Year-over-year comparison** — overlay the current year's cumulative distance against
+  prior years on the trends chart. Purely a frontend aggregation of existing
+  `activities` data; no new endpoint needed.
+
+### Goals & tracking
+
+- **Annual goals** — athlete sets a target distance and/or elevation for the year; the
+  overview shows a progress ring and projected finish date. Stored in
+  `athletes.settings` JSONB; computed client-side from the existing activities data.
+- **Personal records board** — all-time bests in one screen: longest ride, biggest
+  climbing day, fastest segment PR, highest single-day TSS. Derived from existing
+  tables via a new `GET /athlete/records` endpoint.
+- **Streak tracking** — current and longest active streaks (consecutive days ridden,
+  weekly minimums). Computed server-side from `activities.start_date`;
+  surfaced on the overview.
+
+### Activity experience
+
+- **Ride heatmap** — aggregate all `summary_polyline` traces on a single Leaflet map.
+  Rendered client-side from existing polyline data; no new endpoint. Accessible from a
+  new `/heatmap` route.
+- **Side-by-side ride comparison** — select two activities on the same route and compare
+  splits, average power, HR, and speed side-by-side. New endpoint:
+  `GET /activities/compare?a=<id>&b=<id>`.
+- **Weather overlay** — surface historical weather (temperature, wind speed, precipitation)
+  for each activity using a weather API (e.g. Open-Meteo, free tier). Fetched and
+  stored at detail-fetch time; displayed on the ride detail screen. New column:
+  `activities.weather JSONB`.
+
+### Notifications
+
+- **Weekly digest** — opt-in summary delivered each Monday covering the previous week's
+  stats (distance, elevation, ride count, standout ride). Delivered via email using a
+  transactional email provider (e.g. Resend). Backend cron job triggers
+  `POST /notifications/digest`.
 
 ## Open questions / risks
 
