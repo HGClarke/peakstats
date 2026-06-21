@@ -16,7 +16,7 @@
 - **Backend done = clean:** `pytest`, `ruff check .`, `mypy` all pass from `backend/`.
 - **Frontend done = clean:** `npm test && npm run lint && npm run build` all pass from `frontend/`.
 - **Frontend imports** use the `@/` alias; **data stays out of JSX** (api layer only). (`frontend/CLAUDE.md`)
-- **Wall-clock invariant:** `start_date_local` is a wall-clock label — NEVER timezone-convert it (no `.astimezone()` / local conversion). Stored in a `timestamptz` column with its trailing `Z`; the numerals round-trip intact.
+- **Wall-clock invariant:** `start_date_local` is a wall-clock label — NEVER timezone-convert it (no `.astimezone()` / local conversion). Stored in a `text` column byte-for-byte as Strava sent it (trailing `Z` and all), so its day is correct regardless of any DB session timezone.
 - **Commits:** end each message body with `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>`.
 
 ## File Structure
@@ -47,11 +47,13 @@
 Create `supabase/migrations/0003_activities_start_date_local.sql`:
 
 ```sql
--- Strava's per-ride local wall-clock start time. Stored verbatim (carries a
--- trailing Z from Strava); treat as a wall-clock label, never tz-convert it.
+-- Strava's per-ride local wall-clock start time. Stored as text so the value is
+-- kept verbatim (Strava's string carries a trailing Z); it is a wall-clock label,
+-- never an instant, so we deliberately avoid timestamptz to keep its correctness
+-- independent of any Postgres session timezone. Never tz-convert it.
 -- Nullable: rows synced before this column fall back to UTC start_date until a
 -- re-backfill repopulates them.
-alter table activities add column start_date_local timestamptz;
+alter table activities add column start_date_local text;
 ```
 
 - [ ] **Step 2: Apply the migration**
@@ -68,7 +70,7 @@ from information_schema.columns
 where table_name = 'activities' and column_name = 'start_date_local';
 ```
 
-Expected: one row — `start_date_local | timestamp with time zone | YES`.
+Expected: one row — `start_date_local | text | YES`.
 
 - [ ] **Step 4: Commit**
 

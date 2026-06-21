@@ -48,8 +48,9 @@ re-introduce the travel failure mode or duplicate a value Strava already provide
 
 `start_date_local` is a **wall-clock label, not an instant — never time-zone-convert it.**
 Strava returns it as an ISO string with a trailing `Z` (e.g. `2026-06-20T18:30:00Z`) even
-though the value is local wall-clock. Stored verbatim in a `timestamptz` column and
-returned by PostgREST with its `Z` intact, the wall-clock numerals survive the round trip:
+though the value is local wall-clock. Stored in a `text` column, the string is kept exactly
+as Strava sent it (trailing `Z` and all), so its correctness does not depend on any Postgres
+session timezone. The wall-clock numerals are read directly on both sides:
 
 - Backend: `datetime.fromisoformat(start_date_local).weekday()` — **without** `.astimezone()` —
   yields the local weekday (`.weekday()` reads the stored y/m/d directly).
@@ -63,11 +64,13 @@ Any code that calls `.astimezone()` / local-time conversion on this field is a b
 ### 1. Database — migration `0003_activities_start_date_local.sql`
 
 ```sql
-alter table activities add column start_date_local timestamptz;
+alter table activities add column start_date_local text;
 ```
 
-Nullable: existing rows have no value, and code falls back to `start_date` (UTC) for
-those until a re-backfill fills them.
+`text` (not `timestamptz`) so the value is stored byte-for-byte as Strava sent it — a
+wall-clock label whose correctness is independent of any DB session timezone. Nullable:
+existing rows have no value, and code falls back to `start_date` (UTC) for those until a
+re-backfill fills them.
 
 ### 2. Ingest — `backend/app/services/sync.py`
 
@@ -130,7 +133,7 @@ today for un-backfilled rows.
 ```
 Strava summary.start_date_local
   → sync/webhook _to_activity_row
-    → activities.start_date_local (timestamptz, stored verbatim)
+    → activities.start_date_local (text, stored verbatim)
       → get_overview:
           tz (browser) ──► this_monday / last_monday (wall-clock in tz)
           _local_dt(row) ─► ride weekday + week membership
