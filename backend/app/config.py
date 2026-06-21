@@ -7,12 +7,15 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     frontend_origin: str = "http://localhost:5173"
+    backend_base_url: str = "http://localhost:8000"
     supabase_url: str = ""
     supabase_service_role_key: str = ""
     strava_client_id: str = ""
     strava_client_secret: str = ""
     strava_webhook_verify_token: str = ""
     session_secret: str = ""
+    session_cookie_secure: bool = False
+    session_cookie_samesite: str = "lax"
 
 
 @lru_cache
