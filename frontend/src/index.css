@@ -35,6 +35,25 @@
     --surface-elevated: #ffffff;
     --line: rgba(0, 0, 0, 0.1);
     --line-subtle: rgba(0, 0, 0, 0.07);
+
+    /* Extended dashboard palette — light */
+    --panel2: #f6f5ef;
+    --sidebar: #eeede7;
+    --border2: rgba(0, 0, 0, 0.06);
+    --border-strong: rgba(0, 0, 0, 0.14);
+    --text2: #22262d;
+    --text-hi: #3a414b;
+    --muted2: #6b7480;
+    --muted5: #a0a6ae;
+    --good: #1f9d63;
+    --good-soft: rgba(31, 157, 99, 0.12);
+    --bad: #d9534f;
+    --bad-soft: rgba(217, 83, 79, 0.12);
+    --accent-soft: rgba(252, 76, 2, 0.12);
+    --track: rgba(0, 0, 0, 0.12);
+    --chartgrid: rgba(0, 0, 0, 0.08);
+    --overlay: rgba(244, 243, 238, 0.78);
+    --skel: rgba(0, 0, 0, 0.06);
   }
 
   .dark {
@@ -68,6 +87,25 @@
     --surface-elevated: #15181e;
     --line: rgba(255, 255, 255, 0.08);
     --line-subtle: rgba(255, 255, 255, 0.06);
+
+    /* Extended dashboard palette — dark */
+    --panel2: #0e1116;
+    --sidebar: #0a0c10;
+    --border2: rgba(255, 255, 255, 0.06);
+    --border-strong: rgba(255, 255, 255, 0.1);
+    --text2: #e6e9ee;
+    --text-hi: #c4cad4;
+    --muted2: #8b93a1;
+    --muted5: #5b6472;
+    --good: #34d399;
+    --good-soft: rgba(52, 211, 153, 0.13);
+    --bad: #f87171;
+    --bad-soft: rgba(248, 113, 113, 0.12);
+    --accent-soft: rgba(252, 76, 2, 0.12);
+    --track: rgba(255, 255, 255, 0.09);
+    --chartgrid: rgba(255, 255, 255, 0.05);
+    --overlay: rgba(8, 10, 13, 0.74);
+    --skel: rgba(255, 255, 255, 0.06);
   }
 }
 
@@ -78,6 +116,7 @@
   body {
     background-color: var(--background);
     color: var(--foreground);
+    font-family: var(--font-sans);
   }
 }
 
@@ -105,9 +144,13 @@
 
   --color-strava: #fc4c02;
   --color-strava-glow: rgba(252, 76, 2, 0.32);
+  --color-strava-deep: #b8370a;
+  --color-strava-light: #ff7a3d;
+  --color-strava-hover: #e34602;
   --color-ride-green: #1f9d63;
   --font-display: "Space Grotesk", sans-serif;
   --font-mono: "JetBrains Mono", monospace;
+  --font-sans: "Archivo", -apple-system, sans-serif;
 
   /* Semantic brand tokens — resolve per theme via the vars above.
      Use these instead of raw hex + dark: pairs. */
@@ -121,6 +164,23 @@
   --color-surface-elevated: var(--surface-elevated);
   --color-line: var(--line);
   --color-line-subtle: var(--line-subtle);
+  --color-surface-panel2: var(--panel2);
+  --color-surface-sidebar: var(--sidebar);
+  --color-line2: var(--border2);
+  --color-line-strong: var(--border-strong);
+  --color-ink2: var(--text2);
+  --color-ink-hi: var(--text-hi);
+  --color-muted2: var(--muted2);
+  --color-muted5: var(--muted5);
+  --color-good: var(--good);
+  --color-good-soft: var(--good-soft);
+  --color-bad: var(--bad);
+  --color-bad-soft: var(--bad-soft);
+  --color-strava-soft: var(--accent-soft);
+  --color-track: var(--track);
+  --color-chartgrid: var(--chartgrid);
+  --color-overlay: var(--overlay);
+  --color-skel: var(--skel);
 }
 
 /* ── Landing page grid background ────────────────────────── */
@@ -137,3 +197,16 @@
     linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
   background-size: 44px 44px;
 }
+
+/* ── Sync + skeleton animations ──────────────────────────── */
+@keyframes pkpulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(0.55); opacity: 0.5; } }
+@keyframes pkspin { to { transform: rotate(360deg); } }
+@keyframes pkshimmer { 0% { transform: translateX(-120%); } 100% { transform: translateX(420%); } }
+@keyframes pkskel { 0%, 100% { opacity: 0.5; } 50% { opacity: 0.85; } }
+@keyframes pkrise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+.animate-pkpulse { animation: pkpulse 1.2s ease-in-out infinite; }
+.animate-pkspin { animation: pkspin 0.7s linear infinite; }
+.animate-pkshimmer { animation: pkshimmer 1.5s linear infinite; }
+.animate-pkskel { animation: pkskel 1.6s ease-in-out infinite; }
+.animate-pkrise { animation: pkrise 0.35s ease both; }

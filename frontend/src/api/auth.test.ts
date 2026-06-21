@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { disconnect, fetchAthlete, logout, stravaLoginUrl } from "./auth";
+import { renderHook, waitFor } from "@testing-library/react";
+import { createQueryWrapper } from "@/test/providers";
+import { disconnect, fetchAthlete, logout, stravaLoginUrl, useAthlete } from "./auth";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -53,5 +55,24 @@ describe("auth api", () => {
       expect.stringContaining("/athlete/connection"),
       expect.objectContaining({ method: "DELETE", credentials: "include" })
     );
+  });
+});
+
+describe("useAthlete", () => {
+  it("loads the athlete via react-query", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify(athlete), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        })
+      )
+    );
+    const { result } = renderHook(() => useAthlete(), {
+      wrapper: createQueryWrapper(),
+    });
+    await waitFor(() => expect(result.current.data).toEqual(athlete));
+    expect(result.current.error).toBeNull();
   });
 });

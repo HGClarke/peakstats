@@ -8,11 +8,13 @@ from app.strava import StravaClient
 
 
 def start_login(strava: StravaClient) -> tuple[str, str]:
+    """Generate a CSRF state token and return (authorization_url, state)."""
     state = secrets.token_urlsafe(32)
     return strava.authorize_url(state), state
 
 
 def handle_callback(code: str, supabase: httpx.Client, strava: StravaClient) -> int:
+    """Exchange the OAuth code, upsert athlete and tokens in DB, and return the athlete ID."""
     token = strava.exchange_code(code)
     athlete = token.athlete
     name = f"{athlete.get('firstname', '')} {athlete.get('lastname', '')}".strip()

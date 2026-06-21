@@ -1,0 +1,1135 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Archivo:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/peakstats-favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="icons/peakstats-favicon-16.png">
+<title>peakstats — dashboard</title>
+<style>
+  body{margin:0;}
+  *{box-sizing:border-box;}
+  input{font-family:'Archivo',sans-serif;}
+  input::placeholder{color:var(--muted4);}
+  input[type="number"]{-moz-appearance:textfield;}
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+  ::-webkit-scrollbar{width:10px;height:10px;}
+  ::-webkit-scrollbar-thumb{background:var(--track);border-radius:6px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  @keyframes pkpulse{0%,100%{transform:scale(1);opacity:1;}50%{transform:scale(0.9);opacity:0.65;}}
+  [data-theme="dark"]{
+    --bg:#0b0d11; --sidebar:#0a0c10; --panel:#13161c; --panel2:#0e1116;
+    --border:rgba(255,255,255,0.07); --border2:rgba(255,255,255,0.06); --borderStrong:rgba(255,255,255,0.1);
+    --text:#f4f5f7; --text2:#e6e9ee; --textHi:#c4cad4;
+    --muted:#9aa3b1; --muted2:#8b93a1; --muted3:#7b8493; --muted4:#6b7280; --muted5:#5b6472;
+    --grid:rgba(255,255,255,0.035); --chartgrid:rgba(255,255,255,0.05);
+    --accent:#fc4c02; --accentSoft:rgba(252,76,2,0.12);
+    --good:#34d399; --goodSoft:rgba(52,211,153,0.13); --bad:#f87171; --badSoft:rgba(248,113,113,0.12);
+    --dotIdle:rgba(255,255,255,0.22); --track:rgba(255,255,255,0.08); --overlay:rgba(11,13,17,0.6);
+  }
+  [data-theme="light"]{
+    --bg:#f4f3ee; --sidebar:#eeede7; --panel:#ffffff; --panel2:#f6f5ef;
+    --border:rgba(0,0,0,0.09); --border2:rgba(0,0,0,0.06); --borderStrong:rgba(0,0,0,0.14);
+    --text:#15181d; --text2:#22262d; --textHi:#3a414b;
+    --muted:#55606e; --muted2:#6b7480; --muted3:#7a828d; --muted4:#8a909a; --muted5:#a0a6ae;
+    --grid:rgba(0,0,0,0.04); --chartgrid:rgba(0,0,0,0.08);
+    --accent:#fc4c02; --accentSoft:rgba(252,76,2,0.12);
+    --good:#1f9d63; --goodSoft:rgba(31,157,99,0.12); --bad:#d9534f; --badSoft:rgba(217,83,79,0.12);
+    --dotIdle:rgba(0,0,0,0.18); --track:rgba(0,0,0,0.12); --overlay:rgba(244,243,238,0.72);
+  }
+  @media (max-width:1024px){
+    .kpis{grid-template-columns:repeat(2,1fr) !important;}
+  }
+  @media (max-width:860px){
+    .ovlower{grid-template-columns:1fr !important;}
+    .rdtop{grid-template-columns:1fr !important;}
+    .segcmp{grid-template-columns:1fr !important;}
+  }
+  @media (max-width:760px){
+    .droot{flex-direction:column !important;height:100vh !important;}
+    .dsb{width:100% !important;height:auto !important;flex-direction:row !important;align-items:center !important;padding:10px 14px !important;border-right:none !important;border-bottom:1px solid var(--border2) !important;gap:10px;overflow-x:auto;flex:none !important;}
+    .dsb-logo{margin-bottom:0 !important;flex:none;}
+    .dnav{flex-direction:row !important;gap:6px !important;flex:1;overflow-x:auto;}
+    .nav-item{flex:none;white-space:nowrap;}
+    .dsb-spacer{display:none !important;}
+    .dsb-user{border-top:none !important;padding-top:0 !important;flex:none !important;}
+    .dsb-userinfo{display:none !important;}
+    .dtop{padding:0 16px !important;}
+    .dbody{padding:18px 16px 34px !important;}
+    .tblcard{overflow-x:auto;}
+    .tblcard > div{min-width:660px;}
+    .segmeta{grid-template-columns:repeat(2,1fr) !important;}
+  }
+  @media (max-width:520px){
+    .kpis{grid-template-columns:1fr !important;}
+  }
+</style>
+</helmet>
+
+<div data-theme="{{ theme }}" class="droot" style="position:relative;display:flex;min-height:100vh;height:100vh;background:var(--bg);font-family:'Archivo',-apple-system,sans-serif;color:var(--text);overflow:hidden;transition:background .25s ease;">
+
+  <!-- ===== SIDEBAR ===== -->
+  <div class="dsb" style="width:236px;flex:none;border-right:1px solid var(--border2);display:flex;flex-direction:column;padding:22px 16px;background:var(--sidebar);">
+    <div class="dsb-logo" style="display:flex;align-items:center;gap:11px;padding:0 8px;margin-bottom:30px;">
+      <div style="width:32px;height:32px;border-radius:9px;background:var(--panel);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;">
+        <svg width="21" height="21" viewBox="0 0 100 100" fill="none">
+          <polyline points="16,70 44,34 64,56 84,30" stroke="#fc4c02" stroke-width="10" stroke-linejoin="round" stroke-linecap="round"></polyline>
+          <line x1="16" y1="86" x2="84" y2="86" style="stroke:var(--muted4)" stroke-width="8" stroke-linecap="round"></line>
+        </svg>
+      </div>
+      <span style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:18px;letter-spacing:-0.01em;">peakstats</span>
+    </div>
+
+    <div class="dnav" style="display:flex;flex-direction:column;gap:4px;">
+      <sc-for list="{{ navItems }}" as="item" hint-placeholder-count="6">
+        <div onClick="{{ item.onClick }}" class="nav-item" style="{{ item.style }}" style-hover="background:var(--accentSoft);">
+          <span style="{{ item.dotStyle }}"></span>
+          <span style="font-size:14px;font-weight:500;">{{ item.label }}</span>
+        </div>
+      </sc-for>
+    </div>
+
+    <div class="dsb-spacer" style="flex:1;"></div>
+
+    <div class="dsb-user" style="border-top:1px solid var(--border2);padding-top:16px;display:flex;align-items:center;gap:11px;">
+      <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#fc4c02,#b8370a);display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:14px;color:#fff;">AM</div>
+      <div class="dsb-userinfo" style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:500;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Alex Mercer</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted4);display:flex;align-items:center;gap:5px;"><span style="width:6px;height:6px;border-radius:50%;background:#fc4c02;"></span>{{ syncLabel }}</div>
+      </div>
+      <button onClick="{{ logOut }}" title="Log out" style="width:32px;height:32px;flex:none;border-radius:8px;background:transparent;border:1px solid var(--border);color:var(--muted2);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:color .12s ease,border-color .12s ease;" style-hover="color:#fc4c02;border-color:rgba(252,76,2,0.4);">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== MAIN ===== -->
+  <div style="flex:1;display:flex;flex-direction:column;min-width:0;">
+
+    <!-- topbar -->
+    <div class="dtop" style="height:70px;flex:none;border-bottom:1px solid var(--border2);display:flex;align-items:center;justify-content:space-between;padding:0 32px;">
+      <div style="display:flex;align-items:center;gap:14px;">
+        <sc-if value="{{ showBack }}" hint-placeholder-val="{{ false }}">
+          <button onClick="{{ back }}" style="width:34px;height:34px;border-radius:9px;border:1px solid var(--borderStrong);background:transparent;color:var(--muted2);cursor:pointer;font-size:17px;display:flex;align-items:center;justify-content:center;" style-hover="color:var(--text);">←</button>
+        </sc-if>
+        <h1 style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:22px;margin:0;letter-spacing:-0.01em;">{{ pageTitle }}</h1>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted4);">{{ pageSub }}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;">
+        <sc-if value="{{ showPeriod }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;gap:3px;background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:3px;">
+            <sc-for list="{{ periodBtns }}" as="b" hint-placeholder-count="3">
+              <button onClick="{{ b.onClick }}" style="{{ b.style }}">{{ b.label }}</button>
+            </sc-for>
+          </div>
+        </sc-if>
+        <button onClick="{{ toggleTheme }}" title="Toggle theme" style="width:38px;height:38px;border-radius:10px;background:var(--panel2);border:1px solid var(--border);color:var(--muted2);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:color .12s ease,border-color .12s ease;" style-hover="color:var(--text);border-color:rgba(252,76,2,0.4);">
+          <sc-if value="{{ isDark }}" hint-placeholder-val="{{ true }}">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+          </sc-if>
+          <sc-if value="{{ isLight }}" hint-placeholder-val="{{ false }}">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+          </sc-if>
+        </button>
+      </div>
+    </div>
+
+    <!-- scroll body -->
+    <div class="dbody" style="flex:1;overflow-y:auto;padding:28px 32px 40px;">
+
+      <!-- ============ OVERVIEW ============ -->
+      <sc-if value="{{ showOverview }}" hint-placeholder-val="{{ true }}">
+        <div>
+          <div class="kpis" style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:18px;">
+            <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="4">
+              <div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:18px 20px;transition:transform .15s ease,border-color .15s ease;" style-hover="transform:translateY(-2px);border-color:rgba(252,76,2,0.3);">
+                <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.12em;color:var(--muted3);margin-bottom:12px;">{{ k.label }}</div>
+                <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:10px;">
+                  <span style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:30px;letter-spacing:-0.02em;line-height:1;">{{ k.value }}</span>
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted2);">{{ k.unit }}</span>
+                </div>
+                <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:{{ k.deltaColor }};background:{{ k.deltaBg }};padding:4px 9px;border-radius:999px;">{{ k.delta }}</span>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="margin-bottom:18px;">
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:20px 22px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                <span style="font-family:'Space Grotesk',sans-serif;font-weight:500;font-size:15px;">Distance over time</span>
+                <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted4);">{{ trendRange }}</span>
+              </div>
+              <div style="display:flex;gap:8px;">
+                <div style="position:relative;width:58px;height:200px;flex:none;">
+                  <span style="position:absolute;right:0;top:16px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted5);white-space:nowrap;">{{ trendYTop }}</span>
+                  <span style="position:absolute;right:0;top:88px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted5);">{{ trendYMid }}</span>
+                  <span style="position:absolute;right:0;top:160px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted5);">0</span>
+                </div>
+                <div style="flex:1;min-width:0;">
+                  <svg viewBox="0 0 760 210" preserveAspectRatio="none" style="width:100%;height:200px;display:block;">
+                    <defs>
+                      <linearGradient id="dgrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0" stop-color="#fc4c02" stop-opacity="0.30"></stop>
+                        <stop offset="1" stop-color="#fc4c02" stop-opacity="0"></stop>
+                      </linearGradient>
+                    </defs>
+                    <line x1="0" y1="22" x2="760" y2="22" style="stroke:var(--chartgrid)" stroke-width="1"></line>
+                    <line x1="0" y1="98" x2="760" y2="98" style="stroke:var(--chartgrid)" stroke-width="1"></line>
+                    <line x1="0" y1="174" x2="760" y2="174" style="stroke:var(--chartgrid)" stroke-width="1"></line>
+                    <path d="{{ trendArea }}" fill="url(#dgrad)"></path>
+                    <path d="{{ trendLine }}" fill="none" stroke="#fc4c02" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"></path>
+                    <circle cx="{{ trendLastX }}" cy="{{ trendLastY }}" r="4.5" fill="#fc4c02" style="stroke:var(--panel)" stroke-width="2.5"></circle>
+                  </svg>
+                  <div style="display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted5);margin-top:6px;padding:0 4px;">
+                    <sc-for list="{{ trendLabels }}" as="l" hint-placeholder-count="7">
+                      <span>{{ l.label }}</span>
+                    </sc-for>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="ovlower" style="display:grid;grid-template-columns:1.55fr 1fr;gap:16px;">
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:8px 8px 4px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px 10px;">
+                <span style="font-family:'Space Grotesk',sans-serif;font-weight:500;font-size:15px;">Recent rides</span>
+                <button onClick="{{ goActivities }}" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#fc4c02;background:transparent;border:none;cursor:pointer;" style-hover="text-decoration:underline;">VIEW ALL →</button>
+              </div>
+              <sc-for list="{{ recentRides }}" as="r" hint-placeholder-count="4">
+                <div onClick="{{ r.onClick }}" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-radius:11px;cursor:pointer;transition:background .12s ease;" style-hover="background:var(--panel2);">
+                  <div style="display:flex;align-items:center;gap:13px;">
+                    <span style="width:9px;height:9px;border-radius:50%;background:{{ r.dotColor }};flex:none;"></span>
+                    <div>
+                      <div style="font-size:14px;font-weight:500;color:var(--text2);display:flex;align-items:center;gap:8px;">{{ r.name }}<span style="{{ r.prStyle }}">{{ r.prLabel }}</span></div>
+                      <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--muted4);margin-top:2px;">{{ r.date }} · {{ r.typeLabel }}</div>
+                    </div>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:22px;">
+                    <div style="text-align:right;">
+                      <div style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:15px;">{{ r.dist }}</div>
+                      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted4);">{{ r.dur }}</div>
+                    </div>
+                    <span style="color:var(--muted5);font-size:16px;">›</span>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:20px 22px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+                <span style="font-family:'Space Grotesk',sans-serif;font-weight:500;font-size:15px;">Personal records</span>
+                <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted4);">SEGMENTS</span>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:14px;">
+                <sc-for list="{{ segmentsTop }}" as="s" hint-placeholder-count="4">
+                  <div style="display:flex;align-items:center;justify-content:space-between;">
+                    <div>
+                      <div style="font-size:13.5px;font-weight:500;color:var(--text2);">{{ s.name }}</div>
+                      <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:{{ s.noteColor }};margin-top:2px;">{{ s.note }}</div>
+                    </div>
+                    <span style="font-family:'JetBrains Mono',monospace;font-size:15px;color:var(--text);">{{ s.time }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ============ ACTIVITIES (search + paginated) ============ -->
+      <sc-if value="{{ showActivities }}" hint-placeholder-val="{{ false }}">
+        <div>
+          <!-- filter bar -->
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+            <div style="display:flex;align-items:center;gap:9px;flex:1;min-width:220px;height:40px;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:0 14px;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--muted3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              <input value="{{ actQuery }}" onInput="{{ setActQuery }}" placeholder="Search activities…" style="flex:1;background:transparent;border:none;outline:none;color:var(--text);font-size:13.5px;" />
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;height:40px;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:0 12px;">
+              <span style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.08em;color:var(--muted3);">DIST ≥</span>
+              <input value="{{ actMinDist }}" onInput="{{ setActMinDist }}" type="number" min="0" placeholder="0" style="width:48px;background:transparent;border:none;outline:none;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:13px;" />
+              <span style="font-size:11px;color:var(--muted2);">{{ distU }}</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;height:40px;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:0 12px;">
+              <span style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.08em;color:var(--muted3);">TIME ≥</span>
+              <input value="{{ actMinTime }}" onInput="{{ setActMinTime }}" type="number" min="0" placeholder="0" style="width:42px;background:transparent;border:none;outline:none;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:13px;" />
+              <span style="font-size:11px;color:var(--muted2);">min</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;height:40px;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:0 12px;">
+              <span style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.08em;color:var(--muted3);">ELEV ≥</span>
+              <input value="{{ actMinElev }}" onInput="{{ setActMinElev }}" type="number" min="0" placeholder="0" style="width:52px;background:transparent;border:none;outline:none;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:13px;" />
+              <span style="font-size:11px;color:var(--muted2);">{{ elevU }}</span>
+            </div>
+            <button onClick="{{ clearActFilters }}" style="height:40px;padding:0 14px;border-radius:10px;background:transparent;border:1px solid var(--border);color:var(--muted2);font-size:13px;cursor:pointer;transition:all .12s ease;" style-hover="color:var(--text);border-color:var(--borderStrong);">Clear</button>
+          </div>
+
+          <div class="tblcard" style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:8px;">
+            <div style="display:grid;grid-template-columns:1.7fr 1fr 1fr 1fr 1fr 36px;gap:12px;padding:14px 18px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.1em;color:var(--muted4);border-bottom:1px solid var(--border2);">
+              <sc-for list="{{ actHeaders }}" as="h" hint-placeholder-count="6">
+                <span onClick="{{ h.onClick }}" style="{{ h.style }}">{{ h.label }}{{ h.arrow }}</span>
+              </sc-for>
+            </div>
+            <sc-for list="{{ pageRides }}" as="r" hint-placeholder-count="9">
+              <div onClick="{{ r.onClick }}" style="display:grid;grid-template-columns:1.7fr 1fr 1fr 1fr 1fr 36px;gap:12px;align-items:center;padding:15px 18px;border-radius:11px;cursor:pointer;transition:background .12s ease;" style-hover="background:var(--panel2);">
+                <div style="display:flex;align-items:center;gap:13px;">
+                  <span style="width:9px;height:9px;border-radius:50%;background:{{ r.dotColor }};flex:none;"></span>
+                  <div>
+                    <div style="font-size:14px;font-weight:500;color:var(--text2);display:flex;align-items:center;gap:8px;">{{ r.name }}<span style="{{ r.prStyle }}">{{ r.prLabel }}</span></div>
+                    <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--muted4);margin-top:2px;">{{ r.date }} · {{ r.typeLabel }}</div>
+                  </div>
+                </div>
+                <span style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:15px;">{{ r.dist }}</span>
+                <span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--textHi);">{{ r.dur }}</span>
+                <span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--textHi);">{{ r.elev }}</span>
+                <span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--textHi);">{{ r.speed }}</span>
+                <span style="color:var(--muted5);font-size:16px;text-align:right;">›</span>
+              </div>
+            </sc-for>
+            <sc-if value="{{ actEmpty }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:48px 18px;text-align:center;color:var(--muted3);font-size:14px;">No activities match your filters.</div>
+            </sc-if>
+          </div>
+
+          <!-- pager -->
+          <sc-if value="{{ showPager }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:18px;">
+              <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted4);">{{ pageRange }}</span>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <button onClick="{{ prevPage }}" style="{{ prevStyle }}">‹ Prev</button>
+                <sc-for list="{{ pager }}" as="p" hint-placeholder-count="6">
+                  <sc-if value="{{ p.isPage }}" hint-placeholder-val="{{ true }}">
+                    <button onClick="{{ p.onClick }}" style="{{ p.style }}">{{ p.label }}</button>
+                  </sc-if>
+                  <sc-if value="{{ p.isGap }}" hint-placeholder-val="{{ false }}">
+                    <span style="width:34px;text-align:center;color:var(--muted5);font-family:'JetBrains Mono',monospace;font-size:13px;">…</span>
+                  </sc-if>
+                </sc-for>
+                <button onClick="{{ nextPage }}" style="{{ nextStyle }}">Next ›</button>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <!-- ============ TRENDS ============ -->
+      <sc-if value="{{ showTrends }}" hint-placeholder-val="{{ false }}">
+        <div>
+          <div class="kpis" style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:18px;">
+            <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="4">
+              <div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:18px 20px;">
+                <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.12em;color:var(--muted3);margin-bottom:12px;">{{ k.label }}</div>
+                <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:10px;">
+                  <span style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:30px;letter-spacing:-0.02em;line-height:1;">{{ k.value }}</span>
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted2);">{{ k.unit }}</span>
+                </div>
+                <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:{{ k.deltaColor }};background:{{ k.deltaBg }};padding:4px 9px;border-radius:999px;">{{ k.delta }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:22px 24px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+              <span style="font-family:'Space Grotesk',sans-serif;font-weight:500;font-size:16px;">Distance over time</span>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted4);">{{ trendRange }}</span>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <div style="position:relative;width:60px;height:320px;flex:none;">
+                <span style="position:absolute;right:0;top:23px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted5);white-space:nowrap;">{{ trendYTop }}</span>
+                <span style="position:absolute;right:0;top:147px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted5);">{{ trendYMid }}</span>
+                <span style="position:absolute;right:0;top:272px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted5);">0</span>
+              </div>
+              <div style="flex:1;min-width:0;">
+                <svg viewBox="0 0 760 300" preserveAspectRatio="none" style="width:100%;height:320px;display:block;">
+                  <defs>
+                    <linearGradient id="dgrad2" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0" stop-color="#fc4c02" stop-opacity="0.28"></stop>
+                      <stop offset="1" stop-color="#fc4c02" stop-opacity="0"></stop>
+                    </linearGradient>
+                  </defs>
+                  <line x1="0" y1="26" x2="760" y2="26" style="stroke:var(--chartgrid)" stroke-width="1"></line>
+                  <line x1="0" y1="143" x2="760" y2="143" style="stroke:var(--chartgrid)" stroke-width="1"></line>
+                  <line x1="0" y1="260" x2="760" y2="260" style="stroke:var(--chartgrid)" stroke-width="1"></line>
+                  <path d="{{ trendAreaBig }}" fill="url(#dgrad2)"></path>
+                  <path d="{{ trendLineBig }}" fill="none" stroke="#fc4c02" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"></path>
+                </svg>
+                <div style="display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted5);margin-top:8px;padding:0 4px;">
+                  <sc-for list="{{ trendLabels }}" as="l" hint-placeholder-count="7">
+                    <span>{{ l.label }}</span>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ============ SEGMENTS (searchable) ============ -->
+      <sc-if value="{{ showSegments }}" hint-placeholder-val="{{ false }}">
+        <div>
+          <div style="display:flex;align-items:center;gap:9px;margin-bottom:16px;max-width:360px;height:40px;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:0 14px;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--muted3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input value="{{ segQuery }}" onInput="{{ setSegQuery }}" placeholder="Search segments…" style="flex:1;background:transparent;border:none;outline:none;color:var(--text);font-size:13.5px;" />
+          </div>
+
+          <div class="tblcard" style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:8px;">
+            <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 36px;gap:12px;padding:14px 18px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.1em;color:var(--muted4);border-bottom:1px solid var(--border2);">
+              <span>SEGMENT</span><span>BEST TIME</span><span>STATUS</span><span onClick="{{ sortSegByAttempts }}" style="cursor:pointer;user-select:none;">ATTEMPTS{{ segSortArrow }}</span><span></span>
+            </div>
+            <sc-for list="{{ segments }}" as="s" hint-placeholder-count="6">
+              <div onClick="{{ s.onClick }}" style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 36px;gap:12px;align-items:center;padding:16px 18px;border-radius:11px;cursor:pointer;transition:background .12s ease;" style-hover="background:var(--panel2);">
+                <div style="display:flex;align-items:center;gap:13px;">
+                  <span style="width:9px;height:9px;border-radius:50%;background:{{ s.dotColor }};flex:none;"></span>
+                  <div>
+                    <div style="font-size:14px;font-weight:500;color:var(--text2);">{{ s.name }}</div>
+                    <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--muted4);margin-top:2px;">{{ s.meta }}</div>
+                  </div>
+                </div>
+                <span style="font-family:'JetBrains Mono',monospace;font-size:15px;color:var(--text);">{{ s.time }}</span>
+                <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:{{ s.noteColor }};">{{ s.note }}</span>
+                <span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted2);">{{ s.attemptsLabel }}</span>
+                <span style="color:var(--muted5);font-size:16px;text-align:right;">›</span>
+              </div>
+            </sc-for>
+            <sc-if value="{{ segEmpty }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:48px 18px;text-align:center;color:var(--muted3);font-size:14px;">No segments match your search.</div>
+            </sc-if>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ============ SEGMENT DETAIL (compare attempts) ============ -->
+      <sc-if value="{{ showSegment }}" hint-placeholder-val="{{ false }}">
+        <div>
+          <!-- meta row -->
+          <div class="segmeta" style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px;">
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px 18px;">
+              <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:0.1em;color:var(--muted3);margin-bottom:9px;">PR TIME</div>
+              <div style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:24px;color:#fc4c02;line-height:1;">{{ seg.prTime }}</div>
+            </div>
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px 18px;">
+              <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:0.1em;color:var(--muted3);margin-bottom:9px;">LENGTH</div>
+              <div style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:24px;line-height:1;">{{ seg.length }}</div>
+            </div>
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px 18px;">
+              <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:0.1em;color:var(--muted3);margin-bottom:9px;">AVG GRADE</div>
+              <div style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:24px;line-height:1;">{{ seg.grade }}</div>
+            </div>
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px 18px;">
+              <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:0.1em;color:var(--muted3);margin-bottom:9px;">ATTEMPTS</div>
+              <div style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:24px;line-height:1;">{{ seg.attemptsCount }}</div>
+            </div>
+          </div>
+
+          <!-- comparison -->
+          <div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:22px 24px;margin-bottom:16px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+              <span style="font-family:'Space Grotesk',sans-serif;font-weight:500;font-size:16px;">Compare attempt</span>
+              <div style="display:flex;align-items:center;gap:10px;">
+                <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted4);">PR vs</span>
+                <div style="position:relative;">
+                  <button onClick="{{ seg.toggleCmp }}" style="{{ seg.triggerStyle }}" style-hover="border-color:rgba(252,76,2,0.45);">
+                    <span style="white-space:nowrap;">{{ seg.cmpLabel }}</span>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--muted2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="{{ seg.chevronStyle }}"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                  </button>
+                  <sc-if value="{{ seg.cmpOpen }}" hint-placeholder-val="{{ false }}">
+                    <div onClick="{{ seg.closeCmp }}" style="position:fixed;inset:0;z-index:20;"></div>
+                    <div style="position:absolute;top:46px;right:0;min-width:232px;background:var(--panel);border:1px solid var(--borderStrong);border-radius:12px;padding:6px;box-shadow:0 16px 44px rgba(0,0,0,0.45);z-index:30;max-height:340px;overflow-y:auto;">
+                      <sc-for list="{{ seg.options }}" as="o" hint-placeholder-count="6">
+                        <div onClick="{{ o.onSelect }}" style="{{ o.style }}" style-hover="background:var(--panel2);">
+                          <span style="width:15px;flex:none;text-align:center;color:#fc4c02;font-size:12px;">{{ o.check }}</span>
+                          <span>{{ o.label }}</span>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                </div>
+              </div>
+            </div>
+
+            <div class="segcmp" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:22px;">
+              <div style="background:var(--panel2);border:1px solid rgba(252,76,2,0.3);border-radius:14px;padding:18px 20px;">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+                  <span style="width:8px;height:8px;border-radius:50%;background:#fc4c02;"></span>
+                  <span style="font-size:12.5px;font-weight:500;color:var(--text2);">Personal best</span>
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted4);margin-left:auto;">{{ seg.best.date }}</span>
+                </div>
+                <div style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:34px;line-height:1;margin-bottom:14px;">{{ seg.best.time }}</div>
+                <div style="display:flex;gap:20px;">
+                  <div><div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--muted3);margin-bottom:4px;">AVG POWER</div><div style="font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--textHi);">{{ seg.best.power }}</div></div>
+                  <div><div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--muted3);margin-bottom:4px;">AVG SPEED</div><div style="font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--textHi);">{{ seg.best.speed }}</div></div>
+                  <div><div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--muted3);margin-bottom:4px;">AVG HR</div><div style="font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--textHi);">{{ seg.best.hr }}</div></div>
+                </div>
+              </div>
+              <div style="background:var(--panel2);border:1px solid var(--border);border-radius:14px;padding:18px 20px;">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+                  <span style="width:8px;height:8px;border-radius:50%;background:var(--muted2);"></span>
+                  <span style="font-size:12.5px;font-weight:500;color:var(--text2);">Selected attempt</span>
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted4);margin-left:auto;">{{ seg.sel.date }}</span>
+                </div>
+                <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:14px;">
+                  <span style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:34px;line-height:1;">{{ seg.sel.time }}</span>
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:{{ seg.delta.color }};background:{{ seg.delta.bg }};padding:4px 9px;border-radius:999px;">{{ seg.delta.text }}</span>
+                </div>
+                <div style="display:flex;gap:20px;">
+                  <div><div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--muted3);margin-bottom:4px;">AVG POWER</div><div style="font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--textHi);">{{ seg.sel.power }}</div></div>
+                  <div><div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--muted3);margin-bottom:4px;">AVG SPEED</div><div style="font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--textHi);">{{ seg.sel.speed }}</div></div>
+                  <div><div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--muted3);margin-bottom:4px;">AVG HR</div><div style="font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--textHi);">{{ seg.sel.hr }}</div></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- bars -->
+            <div style="display:flex;flex-direction:column;gap:12px;">
+              <div style="display:flex;align-items:center;gap:14px;">
+                <span style="width:96px;flex:none;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted3);">PERSONAL BEST</span>
+                <div style="flex:1;height:22px;background:var(--panel2);border-radius:6px;overflow:hidden;"><div style="height:100%;border-radius:6px;background:#fc4c02;width:{{ seg.bestBarW }};transition:width .35s ease;"></div></div>
+                <span style="width:64px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text);">{{ seg.best.time }}</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:14px;">
+                <span style="width:96px;flex:none;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted3);">SELECTED</span>
+                <div style="flex:1;height:22px;background:var(--panel2);border-radius:6px;overflow:hidden;"><div style="height:100%;border-radius:6px;background:var(--muted2);width:{{ seg.selBarW }};transition:width .35s ease;"></div></div>
+                <span style="width:64px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text);">{{ seg.sel.time }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- all attempts -->
+          <div class="tblcard" style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:8px;">
+            <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr 1fr;gap:12px;padding:14px 18px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.1em;color:var(--muted4);border-bottom:1px solid var(--border2);">
+              <span>DATE</span><span>TIME</span><span>AVG POWER</span><span>AVG SPEED</span><span>AVG HR</span>
+            </div>
+            <sc-for list="{{ seg.attempts }}" as="a" hint-placeholder-count="8">
+              <div onClick="{{ a.onClick }}" style="{{ a.rowStyle }}" style-hover="background:var(--panel2);">
+                <div style="display:flex;align-items:center;gap:11px;">
+                  <span style="width:8px;height:8px;border-radius:50%;background:{{ a.dotColor }};flex:none;"></span>
+                  <span style="font-size:13.5px;color:var(--text2);">{{ a.date }}</span>
+                  <span style="{{ a.tagStyle }}">{{ a.tag }}</span>
+                </div>
+                <span style="font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--text);">{{ a.time }}</span>
+                <span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--textHi);">{{ a.power }}</span>
+                <span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--textHi);">{{ a.speed }}</span>
+                <span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--textHi);">{{ a.hr }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ============ SETTINGS ============ -->
+      <sc-if value="{{ showSettings }}" hint-placeholder-val="{{ false }}">
+        <div style="max-width:720px;display:flex;flex-direction:column;gap:16px;">
+          <div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:6px 8px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 16px;border-bottom:1px solid var(--border2);">
+              <div>
+                <div style="font-size:14.5px;font-weight:500;color:var(--text2);">Units</div>
+                <div style="font-size:12.5px;color:var(--muted);margin-top:3px;">Distance, elevation and speed display</div>
+              </div>
+              <div style="display:flex;gap:3px;background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:3px;">
+                <sc-for list="{{ unitBtns }}" as="b" hint-placeholder-count="2">
+                  <button onClick="{{ b.onClick }}" style="{{ b.style }}">{{ b.label }}</button>
+                </sc-for>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 16px;border-bottom:1px solid var(--border2);">
+              <div>
+                <div style="font-size:14.5px;font-weight:500;color:var(--text2);">Appearance</div>
+                <div style="font-size:12.5px;color:var(--muted);margin-top:3px;">Light or dark interface</div>
+              </div>
+              <div style="display:flex;gap:3px;background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:3px;">
+                <sc-for list="{{ themeBtns }}" as="b" hint-placeholder-count="2">
+                  <button onClick="{{ b.onClick }}" style="{{ b.style }}">{{ b.label }}</button>
+                </sc-for>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 16px;">
+              <div>
+                <div style="font-size:14.5px;font-weight:500;color:var(--text2);">Default time range</div>
+                <div style="font-size:12.5px;color:var(--muted);margin-top:3px;">Window shown on Overview &amp; Trends</div>
+              </div>
+              <div style="display:flex;gap:3px;background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:3px;">
+                <sc-for list="{{ periodBtns }}" as="b" hint-placeholder-count="3">
+                  <button onClick="{{ b.onClick }}" style="{{ b.style }}">{{ b.label }}</button>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+
+          <div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:22px 24px;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.12em;color:var(--muted3);margin-bottom:16px;">CONNECTED ACCOUNT</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <div style="display:flex;align-items:center;gap:13px;">
+                <div style="width:42px;height:42px;border-radius:11px;background:#fc4c02;display:flex;align-items:center;justify-content:center;">
+                  <span style="width:3px;height:18px;background:#fff;transform:rotate(38deg);border-radius:2px;"></span>
+                </div>
+                <div>
+                  <div style="font-size:14.5px;font-weight:500;color:var(--text2);">Strava</div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--good);margin-top:3px;display:flex;align-items:center;gap:6px;"><span style="width:6px;height:6px;border-radius:50%;background:var(--good);"></span>Connected · last sync 2m ago</div>
+                </div>
+              </div>
+              <button onClick="{{ logOut }}" style="height:38px;padding:0 18px;border-radius:9px;background:transparent;border:1px solid var(--borderStrong);color:var(--muted);font-family:'Archivo',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:all .12s ease;" style-hover="color:#fc4c02;border-color:rgba(252,76,2,0.4);">Disconnect</button>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ============ RIDE DETAIL ============ -->
+      <sc-if value="{{ showRide }}" hint-placeholder-val="{{ false }}">
+        <div>
+          <div class="rdtop" style="display:grid;grid-template-columns:1.3fr 1fr;gap:16px;margin-bottom:16px;">
+            <div style="background:var(--panel2);border:1px solid var(--border);border-radius:16px;overflow:hidden;position:relative;min-height:280px;">
+              <div style="position:absolute;inset:0;background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:30px 30px;"></div>
+              <svg viewBox="0 0 320 200" preserveAspectRatio="xMidYMid meet" style="position:absolute;inset:0;width:100%;height:100%;">
+                <path d="{{ ride.route }}" fill="none" stroke="#fc4c02" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round" opacity="0.95"></path>
+                <circle cx="{{ ride.startX }}" cy="{{ ride.startY }}" r="6" fill="#34d399" style="stroke:var(--panel2)" stroke-width="2.5"></circle>
+                <circle cx="{{ ride.endX }}" cy="{{ ride.endY }}" r="6" fill="#fc4c02" style="stroke:var(--panel2)" stroke-width="2.5"></circle>
+              </svg>
+              <span style="position:absolute;top:14px;left:16px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.1em;color:var(--muted4);background:var(--overlay);padding:5px 9px;border-radius:6px;">GPS ROUTE · PLACEHOLDER</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+              <sc-for list="{{ ride.kpis }}" as="k" hint-placeholder-count="6">
+                <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;justify-content:center;">
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:0.1em;color:var(--muted3);margin-bottom:9px;">{{ k.label }}</div>
+                  <div style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:22px;line-height:1;">{{ k.value }}<span style="font-size:12px;color:var(--muted2);font-weight:400;"> {{ k.unit }}</span></div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:20px 22px;margin-bottom:16px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+              <span style="font-family:'Space Grotesk',sans-serif;font-weight:500;font-size:15px;">Splits</span>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted4);">PACE PER {{ ride.splitUnit }} · TALLER = FASTER</span>
+            </div>
+            <div style="display:flex;align-items:flex-end;gap:6px;height:150px;">
+              <sc-for list="{{ ride.splits }}" as="s" hint-placeholder-count="10">
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:8px;height:100%;">
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted2);">{{ s.pace }}</div>
+                  <div style="width:100%;border-radius:5px 5px 0 0;background:{{ s.color }};height:{{ s.h }}px;transition:height .3s ease;"></div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted5);">{{ s.idx }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:20px 22px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+              <span style="font-family:'Space Grotesk',sans-serif;font-weight:500;font-size:15px;">Elevation profile</span>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted4);">{{ ride.elevTotal }}</span>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <div style="position:relative;width:58px;height:150px;flex:none;">
+                <span style="position:absolute;right:0;top:11px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted5);white-space:nowrap;">{{ ride.elevYTop }}</span>
+                <span style="position:absolute;right:0;top:69px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted5);">{{ ride.elevYMid }}</span>
+                <span style="position:absolute;right:0;top:127px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted5);">0</span>
+              </div>
+              <div style="flex:1;min-width:0;">
+                <svg viewBox="0 0 760 160" preserveAspectRatio="none" style="width:100%;height:150px;display:block;">
+                  <defs>
+                    <linearGradient id="egrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0" stop-color="#8b93a1" stop-opacity="0.28"></stop>
+                      <stop offset="1" stop-color="#8b93a1" stop-opacity="0"></stop>
+                    </linearGradient>
+                  </defs>
+                  <line x1="0" y1="16" x2="760" y2="16" style="stroke:var(--chartgrid)" stroke-width="1"></line>
+                  <line x1="0" y1="78" x2="760" y2="78" style="stroke:var(--chartgrid)" stroke-width="1"></line>
+                  <line x1="0" y1="140" x2="760" y2="140" style="stroke:var(--chartgrid)" stroke-width="1"></line>
+                  <path d="{{ ride.elevArea }}" fill="url(#egrad)"></path>
+                  <path d="{{ ride.elevLine }}" fill="none" style="stroke:var(--textHi)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></path>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ============ EMPTY STATE ============ -->
+      <sc-if value="{{ showEmpty }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:center;justify-content:center;min-height:520px;">
+          <div style="text-align:center;max-width:430px;">
+            <div style="width:84px;height:84px;border-radius:22px;background:var(--panel);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;margin:0 auto 22px;">
+              <svg width="46" height="46" viewBox="0 0 100 100" fill="none"><polyline points="16,70 44,34 64,56 84,30" stroke="#fc4c02" stroke-width="9" stroke-linejoin="round" stroke-linecap="round"></polyline><line x1="16" y1="86" x2="84" y2="86" style="stroke:var(--muted4)" stroke-width="7" stroke-linecap="round"></line></svg>
+            </div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:22px;color:var(--text);margin-bottom:10px;">{{ emptyTitle }}</div>
+            <div style="font-size:14.5px;color:var(--muted);line-height:1.6;margin-bottom:24px;">{{ emptySub }}</div>
+            <button onClick="{{ resync }}" style="height:42px;padding:0 20px;border-radius:10px;background:#fc4c02;color:#fff;border:none;font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:14px;cursor:pointer;transition:filter .12s ease;" style-hover="filter:brightness(1.07);">Refresh from Strava</button>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted4);margin-top:20px;display:flex;align-items:center;justify-content:center;gap:6px;"><span style="width:6px;height:6px;border-radius:50%;background:var(--good);"></span>Strava connected · auto-syncs after every ride</div>
+          </div>
+        </div>
+      </sc-if>
+
+    </div>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1320,&quot;height&quot;:880},&quot;defaultTheme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;dark&quot;,&quot;light&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;'dark' | 'light'&quot;},&quot;demo&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;sync&quot;,&quot;ready&quot;,&quot;empty&quot;],&quot;default&quot;:&quot;ready&quot;,&quot;tsType&quot;:&quot;'sync' | 'ready' | 'empty'&quot;},&quot;layout&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;overlay&quot;,&quot;banner&quot;],&quot;default&quot;:&quot;banner&quot;,&quot;tsType&quot;:&quot;'overlay' | 'banner'&quot;}}">
+class Component extends DCLogic {
+  constructor(props){
+    super(props);
+    const demo = props.demo || 'sync';
+    this.empty = demo === 'empty';
+    this.state = { view:'overview', period:'week', units:'metric', theme:(props.defaultTheme||'dark'), rideId:null, actPage:0,
+      actQuery:'', actMinDist:'', actMinTime:'', actMinElev:'', actSort:{key:null,dir:'desc'}, segQuery:'', segSortDir:null, segId:null, cmpIdx:1, cmpOpen:false,
+      phase: 'ready', progress: 100 };
+    this.returnView = 'overview';
+    this.pageSize = 9;
+
+    const named = [
+      {id:'r1', name:'Morning commute', type:'Ride',   date:'Tue · Jun 17', distanceKm:12.4, movingSec:1930, elevM:96,  avgKmh:23.1, avgHr:128, cal:312,  pr:false},
+      {id:'r2', name:'River loop',      type:'Ride',   date:'Sun · Jun 15', distanceKm:38.7, movingSec:5662, elevM:412, avgKmh:24.6, avgHr:141, cal:980,  pr:true},
+      {id:'r3', name:'Evening spin',    type:'Ride',   date:'Fri · Jun 13', distanceKm:18.2, movingSec:2765, elevM:150, avgKmh:23.7, avgHr:134, cal:455,  pr:false},
+      {id:'r4', name:'Hill repeats',    type:'Ride',   date:'Wed · Jun 11', distanceKm:24.0, movingSec:4300, elevM:640, avgKmh:20.1, avgHr:152, cal:720,  pr:false},
+      {id:'r5', name:'Commute home',    type:'Ride',   date:'Tue · Jun 10', distanceKm:12.6, movingSec:1982, elevM:88,  avgKmh:22.9, avgHr:126, cal:300,  pr:false},
+      {id:'r6', name:'Weekend gravel',  type:'Gravel', date:'Sun · Jun 8',  distanceKm:52.3, movingSec:8292, elevM:735, avgKmh:22.7, avgHr:139, cal:1320, pr:true}
+    ];
+    this.rides = named.concat(this.genRides());
+
+    this.periodData = {
+      week:  {dist:142.6, sec:22320,  elev:1240,  speed:24.8, d:['+18%','+9%','+22%','+2%'],  pos:[true,true,true,true]},
+      month: {dist:517.6, sec:83100,  elev:4980,  speed:23.9, d:['+6%','+4%','+11%','\u22121%'], pos:[true,true,true,false]},
+      year:  {dist:6240.0,sec:964800, elev:58400, speed:23.6, d:['+14%','+12%','+18%','+1%'], pos:[true,true,true,true]}
+    };
+    this.trends = {
+      week:  {labels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'], values:[14.8,12.4,24.0,8.0,18.2,26.5,38.7], range:'THIS WEEK'},
+      month: {labels:['Week 1','Week 2','Week 3','Week 4'], values:[142.6,118.3,96.5,160.2], range:'THIS MONTH'},
+      year:  {labels:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'], values:[420,460,510,540,580,620,640,610,560,520,440,380], range:'THIS YEAR'}
+    };
+
+    this.segments = [
+      {name:'Riverside Sprint', best:'1:58',  note:'New PR \u00b7 \u22124s',  pr:true,  lengthM:1200, grade:1.2},
+      {name:'Bridge Climb',     best:'4:32',  note:'2nd best',          pr:false, lengthM:2100, grade:4.8},
+      {name:'Park Loop',        best:'11:46', note:'New PR \u00b7 \u221212s', pr:true,  lengthM:5400, grade:0.6},
+      {name:'Canal Flat',       best:'6:09',  note:'3rd best',          pr:false, lengthM:3000, grade:0.3},
+      {name:'Old Mill Rise',    best:'3:21',  note:'2nd best',          pr:false, lengthM:1500, grade:6.1},
+      {name:'Harbour Dash',     best:'2:44',  note:'New PR \u00b7 \u22122s',  pr:true,  lengthM:1100, grade:0.8}
+    ];
+    this.segments.forEach((s,i)=>{ s.id='s'+i; s.attempts=this.buildAttempts(s, i); });
+
+    this.navDefs = [
+      {key:'overview',  label:'Overview'},
+      {key:'activities',label:'Activities'},
+      {key:'trends',    label:'Trends'},
+      {key:'segments',  label:'Segments'},
+      {key:'settings',  label:'Settings'}
+    ];
+
+    this.details = {};
+    this.rides.forEach(r => { this.details[r.id] = this.buildDetail(r); });
+  }
+
+  componentWillUnmount(){ clearInterval(this._t); }
+  runSync(){ clearInterval(this._t); this.setState({ phase:'ready', progress:100 }); }
+  resync(){ window.location.href = encodeURI('Peakstats Sync.dc.html'); }
+
+  genRides(){
+    const names = ['Morning commute','Commute home','Lunch loop','Evening spin','River loop','Hill repeats','Tempo ride','Recovery spin','Weekend gravel','Lakeside cruise','Canal path','City circuit','Sunset ride','Forest trail','Coastal route','Park intervals','Long Sunday','Climb session'];
+    const types = ['Ride','Ride','Ride','Gravel'];
+    const rng = this.mulberry(7321);
+    let day = new Date(2026,5,6);
+    const out = [];
+    for (let i=0;i<42;i++){
+      day = new Date(day.getTime() - (1 + Math.floor(rng()*3))*86400000);
+      const dist = +(6 + rng()*54).toFixed(1);
+      const speed = +(18 + rng()*9).toFixed(1);
+      const movingSec = Math.round(dist/speed*3600);
+      const elev = Math.round(dist*(4 + rng()*22));
+      const hr = Math.round(118 + rng()*40);
+      const cal = Math.round(dist*24 + rng()*120);
+      const pr = rng() < 0.13;
+      const name = names[Math.floor(rng()*names.length)];
+      const type = types[Math.floor(rng()*types.length)];
+      const wd = day.toLocaleDateString('en-US',{weekday:'short'});
+      const md = day.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+      out.push({id:'g'+i, name, type, date:wd+' \u00b7 '+md, distanceKm:dist, movingSec, elevM:elev, avgKmh:speed, avgHr:hr, cal, pr});
+    }
+    return out;
+  }
+
+  parseClock(str){ const p=str.split(':').map(Number); return p.length===2 ? p[0]*60+p[1] : p[0]; }
+  fmtClock(sec){ const m=Math.floor(sec/60), s=Math.round(sec%60); return m+':'+(s<10?'0':'')+s; }
+
+  buildAttempts(s, seed){
+    const rng = this.mulberry(4000 + seed*97);
+    const base = this.parseClock(s.best);
+    const n = 8;
+    const bestIdx = s.pr ? 0 : (2 + Math.floor(rng()*3));
+    let day = new Date(2026,5,16);
+    const arr = [];
+    for (let k=0;k<n;k++){
+      day = new Date(day.getTime() - (3 + Math.floor(rng()*15))*86400000);
+      const extra = k===bestIdx ? 0 : Math.round(2 + rng()*42);
+      const timeSec = base + extra;
+      const speed = +((s.lengthM/1000)/(timeSec/3600)).toFixed(1);
+      const hr = (k!==bestIdx && rng()<0.16) ? null : Math.round(138 + rng()*34);
+      const power = (k!==bestIdx && rng()<0.28) ? null : Math.round(150 + s.grade*9 + rng()*90);
+      arr.push({ id:'a'+seed+'_'+k, dateObj:day, timeSec, hr, speed, power, isBest:k===bestIdx });
+      arr[k].date = day.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+      arr[k].time = this.fmtClock(timeSec);
+    }
+    return arr;
+  }
+
+  mulberry(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+
+  smooth(pts){
+    if (!pts || pts.length===0) return '';
+    if (pts.length===1) return 'M '+pts[0][0].toFixed(1)+','+pts[0][1].toFixed(1);
+    let d = 'M '+pts[0][0].toFixed(1)+','+pts[0][1].toFixed(1);
+    const t = 0.16;
+    for (let i=0;i<pts.length-1;i++){
+      const p0=pts[i-1]||pts[i], p1=pts[i], p2=pts[i+1], p3=pts[i+2]||p2;
+      const c1x=p1[0]+(p2[0]-p0[0])*t, c1y=p1[1]+(p2[1]-p0[1])*t;
+      const c2x=p2[0]-(p3[0]-p1[0])*t, c2y=p2[1]-(p3[1]-p1[1])*t;
+      d+=' C '+c1x.toFixed(1)+','+c1y.toFixed(1)+' '+c2x.toFixed(1)+','+c2y.toFixed(1)+' '+p2[0].toFixed(1)+','+p2[1].toFixed(1);
+    }
+    return d;
+  }
+
+  niceMax(v){
+    if (!isFinite(v) || v<=0) return 1;
+    const pow = Math.pow(10, Math.floor(Math.log10(v)));
+    const n = v/pow;
+    const steps = [1,2,2.5,3,4,5,6,7,8,10];
+    let m = 10;
+    for (let i=0;i<steps.length;i++){ if (n<=steps[i]){ m=steps[i]; break; } }
+    return m*pow;
+  }
+
+  buildPath(values, W, H, padX, padTop, padBot, maxOverride){
+    const max = (maxOverride!=null ? maxOverride : Math.max.apply(null, values) * 1.14) || 1;
+    const n = values.length;
+    const innerW = W - 2*padX;
+    const step = n > 1 ? innerW/(n-1) : 0;
+    const pts = values.map((v,i)=>[padX+i*step, H-padBot-(v/max)*(H-padTop-padBot)]);
+    const line = this.smooth(pts);
+    const area = line + ' L ' + (padX+innerW).toFixed(1)+','+(H-padBot) + ' L ' + padX+','+(H-padBot) + ' Z';
+    const last = pts[pts.length-1];
+    return {line, area, lastX:last[0].toFixed(1), lastY:last[1].toFixed(1)};
+  }
+
+  buildDetail(r){
+    const seed = [...r.id].reduce((a,c)=>a+c.charCodeAt(0),0) + Math.round(r.distanceKm*7);
+    const rng = this.mulberry(seed);
+    const km = Math.min(16, Math.max(5, Math.round(r.distanceKm)));
+    const baseSec = 3600 / r.avgKmh;
+    const variance = (r.type==='Gravel' || r.name.indexOf('Hill')>=0 || r.name.indexOf('Climb')>=0) ? 0.32 : 0.16;
+    const splits = [];
+    for (let i=0;i<km;i++){ splits.push(Math.round(baseSec*(1 - variance/2 + rng()*variance))); }
+    const eN = 26; let e = r.elevM*0.15; const ev = [];
+    for (let i=0;i<eN;i++){ e += (rng()-0.42)*(r.elevM/5); if(e<0) e=0; ev.push(e); }
+    const ep = this.buildPath(ev, 760, 160, 6, 16, 20);
+    let x = 30, y = 100; const rp = [[x,y]];
+    for (let i=0;i<15;i++){ x += 16 + rng()*4; y += (rng()-0.5)*56; if(y<24)y=24; if(y>176)y=176; rp.push([Math.round(x),Math.round(y)]); }
+    const route = this.smooth(rp);
+    return {splits, km, elevRaw:ev, elevLine:ep.line, elevArea:ep.area, route, startX:rp[0][0], startY:rp[0][1], endX:rp[rp.length-1][0], endY:rp[rp.length-1][1]};
+  }
+
+  setNav(k){ this.setState({ view:k }); }
+  openRide(id){ this.returnView = this.state.view; this.setState({ view:'ride', rideId:id }); }
+  openSegment(id){
+    const seg = this.segments.find(s=>s.id===id);
+    let cmp = seg.attempts.findIndex(a=>!a.isBest);
+    if (cmp < 0) cmp = 0;
+    this.returnView = this.state.view;
+    this.setState({ view:'segment', segId:id, cmpIdx:cmp, cmpOpen:false });
+  }
+  back(){ this.setState({ view:this.returnView || 'overview' }); }
+  setPeriod(p){ this.setState({ period:p }); }
+  setUnits(u){ this.setState({ units:u }); }
+  setTheme(t){ this.setState({ theme:t }); }
+  setPage(n){ this.setState({ actPage:n }); }
+  setCmp(i){ this.setState({ cmpIdx:i, cmpOpen:false }); }
+  toggleCmp(){ this.setState(s=>({ cmpOpen:!s.cmpOpen })); }
+  setActQuery(e){ this.setState({ actQuery:e.target.value, actPage:0 }); }
+  setActMinDist(e){ this.setState({ actMinDist:e.target.value, actPage:0 }); }
+  setActMinTime(e){ this.setState({ actMinTime:e.target.value, actPage:0 }); }
+  setActMinElev(e){ this.setState({ actMinElev:e.target.value, actPage:0 }); }
+  clearActFilters(){ this.setState({ actQuery:'', actMinDist:'', actMinTime:'', actMinElev:'', actPage:0 }); }
+  setSegQuery(e){ this.setState({ segQuery:e.target.value }); }
+  sortAct(key){ const s=this.state.actSort; const dir = (s.key===key) ? (s.dir==='asc'?'desc':'asc') : 'desc'; this.setState({ actSort:{key,dir}, actPage:0 }); }
+  sortSegByAttempts(){ const d=this.state.segSortDir; this.setState({ segSortDir: d==='desc'?'asc':'desc' }); }
+
+  makePager(cur, total){
+    const out = [];
+    const add = (n)=> out.push({ isPage:true, isGap:false, label:String(n+1), active:n===cur, onClick:()=>this.setPage(n) });
+    const gap = ()=> out.push({ isPage:false, isGap:true, label:'\u2026' });
+    if (total <= 7){ for (let i=0;i<total;i++) add(i); return out; }
+    add(0);
+    let start = Math.max(1, cur-1), end = Math.min(total-2, cur+1);
+    if (cur <= 2){ start=1; end=3; }
+    if (cur >= total-3){ start=total-4; end=total-2; }
+    if (start > 1) gap();
+    for (let i=start;i<=end;i++) add(i);
+    if (end < total-2) gap();
+    add(total-1);
+    return out;
+  }
+
+  renderVals(){
+    const st = this.state;
+    const metric = st.units === 'metric';
+    const distU = metric ? 'km' : 'mi';
+    const elevU = metric ? 'm' : 'ft';
+    const speedU = metric ? 'km/h' : 'mph';
+    const fDist = v => (metric ? v : v*0.621371).toFixed(1);
+    const fElev = v => Math.round(metric ? v : v*3.28084).toLocaleString();
+    const fSpeed = v => (metric ? v : v*0.621371).toFixed(1);
+    const fDur = s => { const h=Math.floor(s/3600), m=Math.floor((s%3600)/60); return h>0 ? h+'h '+(m<10?'0':'')+m+'m' : m+'m'; };
+    const mmss = s => { const m=Math.floor(s/60), sec=Math.round(s%60); return m+':'+(sec<10?'0':'')+sec; };
+    const fW = w => (w==null ? '\u2014' : w+' W');
+    const fHR = h => (h==null ? '\u2014' : h+' bpm');
+
+    const detailView = st.view==='ride' || st.view==='segment';
+    const navItems = this.navDefs.map(d=>{
+      const active = st.view === d.key || (detailView && this.returnView===d.key);
+      return {
+        label: d.label,
+        onClick: ()=>this.setNav(d.key),
+        style: 'display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;cursor:pointer;transition:background .12s ease;'+(active?'background:var(--accentSoft);color:var(--text);':'color:var(--muted2);'),
+        dotStyle: 'width:7px;height:7px;border-radius:2px;flex:none;background:'+(active?'#fc4c02':'var(--dotIdle)')+';'
+      };
+    });
+
+    const segBtn = (active)=> 'padding:7px 15px;border-radius:8px;border:none;cursor:pointer;font-family:Archivo,sans-serif;font-size:13px;font-weight:500;transition:all .12s ease;'+(active?'background:#fc4c02;color:#fff;':'background:transparent;color:var(--muted2);');
+    const periodBtns = [['week','Week'],['month','Month'],['year','Year']].map(([k,l])=>({ label:l, onClick:()=>this.setPeriod(k), style:segBtn(st.period===k) }));
+    const unitBtns = [['metric','km'],['imperial','mi']].map(([k,l])=>({ label:l, onClick:()=>this.setUnits(k), style:segBtn(st.units===k) }));
+    const themeBtns = [['dark','Dark'],['light','Light']].map(([k,l])=>({ label:l, onClick:()=>this.setTheme(k), style:segBtn(st.theme===k) }));
+
+    const pd = this.periodData[st.period];
+    const mkDelta = (pos)=> pos ? {deltaColor:'var(--good)',deltaBg:'var(--goodSoft)'} : {deltaColor:'var(--bad)',deltaBg:'var(--badSoft)'};
+    const kpis = [
+      Object.assign({label:'DISTANCE',    value:fDist(pd.dist),  unit:distU,  delta:pd.d[0]}, mkDelta(pd.pos[0])),
+      Object.assign({label:'MOVING TIME', value:fDur(pd.sec),    unit:'',     delta:pd.d[1]}, mkDelta(pd.pos[1])),
+      Object.assign({label:'ELEVATION',   value:fElev(pd.elev),  unit:elevU,  delta:pd.d[2]}, mkDelta(pd.pos[2])),
+      Object.assign({label:'AVG SPEED',   value:fSpeed(pd.speed),unit:speedU, delta:pd.d[3]}, mkDelta(pd.pos[3]))
+    ];
+
+    const tr = this.trends[st.period];
+    const dispVals = tr.values.map(v=> metric ? v : v*0.621371);
+    const nmax = this.niceMax(Math.max.apply(null, dispVals));
+    const fmtAxis = v => (v>=100 ? Math.round(v) : Math.round(v*10)/10).toLocaleString();
+    const tp = this.buildPath(dispVals, 760, 210, 12, 22, 36, nmax);
+    const tpBig = this.buildPath(dispVals, 760, 300, 14, 26, 40, nmax);
+    const trendLabels = tr.labels.map(l=>({label:l}));
+    const trendYTop = fmtAxis(nmax)+' '+distU;
+    const trendYMid = fmtAxis(nmax/2);
+
+    const mapRide = (r)=>({
+      name:r.name, typeLabel:r.type, date:r.date,
+      dist: fDist(r.distanceKm)+' '+distU,
+      dur: fDur(r.movingSec),
+      elev: fElev(r.elevM)+' '+elevU,
+      speed: fSpeed(r.avgKmh)+' '+speedU,
+      dotColor: r.pr ? 'var(--good)' : 'var(--accent)',
+      prLabel: r.pr ? 'PR' : '',
+      prStyle: r.pr ? 'font-family:JetBrains Mono,monospace;font-size:9px;letter-spacing:0.08em;color:var(--good);background:var(--goodSoft);padding:2px 7px;border-radius:5px;' : 'display:none;',
+      onClick: ()=>this.openRide(r.id)
+    });
+    const recentRides = this.rides.slice(0,4).map(mapRide);
+
+    // activities filtering + pagination
+    const q = st.actQuery.trim().toLowerCase();
+    const minDistKm = st.actMinDist!=='' ? (metric ? +st.actMinDist : +st.actMinDist/0.621371) : 0;
+    const minElevM = st.actMinElev!=='' ? (metric ? +st.actMinElev : +st.actMinElev/3.28084) : 0;
+    const minTimeSec = st.actMinTime!=='' ? +st.actMinTime*60 : 0;
+    const filtered = this.rides.filter(r =>
+      (!q || r.name.toLowerCase().includes(q)) &&
+      r.distanceKm >= minDistKm && r.movingSec >= minTimeSec && r.elevM >= minElevM
+    );
+    const asort = st.actSort;
+    const sortedAct = (asort && asort.key) ? filtered.slice().sort((a,b)=> asort.dir==='asc' ? a[asort.key]-b[asort.key] : b[asort.key]-a[asort.key]) : filtered;
+    const total = sortedAct.length;
+    const totalPages = Math.max(1, Math.ceil(total/this.pageSize));
+    const page = Math.min(st.actPage, totalPages-1);
+    const start = page*this.pageSize;
+    const end = Math.min(total, start+this.pageSize);
+    const pageRides = sortedAct.slice(start, end).map(mapRide);
+    const pageRange = total>0 ? ('Showing '+(start+1)+'\u2013'+end+' of '+total+' activities') : '';
+    const pager = this.makePager(page, totalPages).map(t=> t.isGap ? t : Object.assign(t, {
+      style: 'min-width:34px;height:34px;padding:0 10px;border-radius:8px;cursor:pointer;font-family:JetBrains Mono,monospace;font-size:13px;transition:all .12s ease;'+(t.active?'background:#fc4c02;color:#fff;border:1px solid #fc4c02;':'background:transparent;color:var(--muted2);border:1px solid var(--border);')
+    }));
+    const edgeBtn = (disabled)=> 'height:34px;padding:0 12px;border-radius:8px;font-family:Archivo,sans-serif;font-size:13px;font-weight:500;border:1px solid var(--border);background:transparent;color:var(--muted2);cursor:'+(disabled?'default':'pointer')+';opacity:'+(disabled?'0.4':'1')+';transition:all .12s ease;';
+    const prevStyle = edgeBtn(page===0);
+    const nextStyle = edgeBtn(page>=totalPages-1);
+    const arrowFor = (key)=> (asort.key===key ? (asort.dir==='asc'?' \u2191':' \u2193') : '');
+    const actHeaders = [
+      {label:'ACTIVITY',key:null}, {label:'DISTANCE',key:'distanceKm'}, {label:'TIME',key:'movingSec'},
+      {label:'ELEVATION',key:'elevM'}, {label:'AVG SPEED',key:'avgKmh'}, {label:'',key:null}
+    ].map(h=>({
+      label:h.label, arrow: h.key?arrowFor(h.key):'',
+      onClick: h.key ? (()=>this.sortAct(h.key)) : (()=>{}),
+      style: 'user-select:none;'+(h.key ? ('cursor:pointer;transition:color .12s ease;'+(asort.key===h.key?'color:var(--text2);':'')) : '')
+    }));
+
+    // overview personal records
+    const segmentsTop = this.segments.slice(0,4).map(s=>({
+      name:s.name, time:s.best, note:s.note, noteColor: s.pr ? 'var(--good)' : 'var(--muted4)'
+    }));
+
+    // segments list (searchable)
+    const sq = st.segQuery.trim().toLowerCase();
+    let segSrc = this.segments.filter(s=>!sq || s.name.toLowerCase().includes(sq));
+    if (st.segSortDir){ segSrc = segSrc.slice().sort((a,b)=> st.segSortDir==='asc' ? a.attempts.length-b.attempts.length : b.attempts.length-a.attempts.length); }
+    const segSortArrow = st.segSortDir ? (st.segSortDir==='asc'?' \u2191':' \u2193') : '';
+    const segments = segSrc.map(s=>({
+      name:s.name, time:s.best, note:s.note,
+      noteColor: s.pr ? 'var(--good)' : 'var(--muted4)',
+      dotColor: s.pr ? 'var(--good)' : 'var(--dotIdle)',
+      meta: fDist(s.lengthM/1000)+' '+distU+' · '+s.grade+'% avg',
+      attemptsLabel: s.attempts.length+'×',
+      onClick: ()=>this.openSegment(s.id)
+    }));
+    const segEmpty = segments.length===0;
+
+    // segment detail
+    let seg = null;
+    if (st.view === 'segment' && st.segId){
+      const sObj = this.segments.find(x=>x.id===st.segId);
+      const bestIdx = sObj.attempts.findIndex(a=>a.isBest);
+      const bi = bestIdx<0 ? 0 : bestIdx;
+      const ci = Math.min(st.cmpIdx, sObj.attempts.length-1);
+      const bA = sObj.attempts[bi];
+      const sA = sObj.attempts[ci];
+      const deltaSec = sA.timeSec - bA.timeSec;
+      const slower = deltaSec > 0;
+      const deltaText = deltaSec===0 ? 'Personal best' : '+'+this.fmtClock(deltaSec).replace(/^0:/,'')+' slower';
+      const maxT = Math.max(bA.timeSec, sA.timeSec) || 1;
+      seg = {
+        prTime: sObj.best,
+        length: fDist(sObj.lengthM/1000)+' '+distU,
+        grade: sObj.grade+'%',
+        attemptsCount: String(sObj.attempts.length),
+        cmpIdx: String(ci),
+        onCmpChange: (e)=>this.setCmp(+e.target.value),
+        cmpOpen: st.cmpOpen,
+        cmpLabel: sA.date+' — '+sA.time+(sA.isBest?' (PR)':''),
+        toggleCmp: ()=>this.toggleCmp(),
+        closeCmp: ()=>this.setState({ cmpOpen:false }),
+        triggerStyle: 'display:flex;align-items:center;gap:10px;height:38px;background:var(--panel2);border:1px solid '+(st.cmpOpen?'#fc4c02':'var(--border)')+';border-radius:9px;color:var(--text);font-family:Archivo,sans-serif;font-size:13px;font-weight:500;padding:0 12px 0 14px;outline:none;cursor:pointer;transition:border-color .12s ease,box-shadow .12s ease;'+(st.cmpOpen?'box-shadow:0 0 0 3px rgba(252,76,2,0.15);':''),
+        chevronStyle: 'transition:transform .18s ease;transform:rotate('+(st.cmpOpen?'180deg':'0deg')+');',
+        options: sObj.attempts.map((a,i)=>({ value:String(i), label: a.date+' — '+a.time+(a.isBest?' (PR)':''), check: i===ci?'\u2713':'', style: 'display:flex;align-items:center;gap:6px;padding:10px 14px 10px 8px;border-radius:8px;cursor:pointer;font-family:Archivo,sans-serif;font-size:13.5px;white-space:nowrap;transition:background .1s ease;color:'+(i===ci?'var(--text)':'var(--text2)')+';'+(i===ci?'background:var(--accentSoft);':''), onSelect: ()=>this.setCmp(i) })),
+        best: { date:bA.date, time:bA.time, speed:fSpeed(bA.speed)+' '+speedU, hr:fHR(bA.hr), power:fW(bA.power) },
+        sel:  { date:sA.date, time:sA.time, speed:fSpeed(sA.speed)+' '+speedU, hr:fHR(sA.hr), power:fW(sA.power) },
+        delta: { text:deltaText, color: deltaSec===0?'var(--good)':'var(--bad)', bg: deltaSec===0?'var(--goodSoft)':'var(--badSoft)' },
+        bestBarW: (bA.timeSec/maxT*100).toFixed(1)+'%',
+        selBarW: (sA.timeSec/maxT*100).toFixed(1)+'%',
+        attempts: sObj.attempts.map((a,i)=>({
+          date:a.date, time:a.time, speed:fSpeed(a.speed)+' '+speedU, hr:fHR(a.hr), power:fW(a.power),
+          dotColor: a.isBest ? '#fc4c02' : (i===ci ? 'var(--muted2)' : 'var(--dotIdle)'),
+          tag: a.isBest ? 'PR' : (i===ci ? 'SELECTED' : ''),
+          tagStyle: a.isBest
+            ? 'font-family:JetBrains Mono,monospace;font-size:9px;letter-spacing:0.08em;color:#fc4c02;background:var(--accentSoft);padding:2px 7px;border-radius:5px;'
+            : (i===ci ? 'font-family:JetBrains Mono,monospace;font-size:9px;letter-spacing:0.08em;color:var(--muted2);background:var(--panel2);padding:2px 7px;border-radius:5px;' : 'display:none;'),
+          rowStyle: 'display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr 1fr;gap:12px;align-items:center;padding:14px 18px;border-radius:11px;cursor:pointer;transition:background .12s ease;'+(i===ci?'background:var(--panel2);':''),
+          onClick: ()=>this.setCmp(i)
+        }))
+      };
+    }
+
+    let ride = null;
+    if (st.view === 'ride' && st.rideId){
+      const r = this.rides.find(x=>x.id===st.rideId);
+      const d = this.details[r.id];
+      const sp = metric ? d.splits.slice() : d.splits.map(s=>s/0.621371);
+      const minS = Math.min.apply(null, sp), maxS = Math.max.apply(null, sp);
+      const splits = sp.map((s,i)=>({
+        idx:i+1, pace:mmss(s),
+        h: Math.round(34 + (1 - (s-minS)/((maxS-minS)||1))*82),
+        color: s===minS ? '#fc4c02' : 'rgba(252,76,2,0.5)'
+      }));
+      const evDisp = d.elevRaw.map(v=> metric ? v : v*3.28084);
+      const enmax = this.niceMax(Math.max.apply(null, evDisp.concat([1])));
+      const epath = this.buildPath(evDisp, 760, 160, 6, 16, 20, enmax);
+      ride = {
+        route:d.route, startX:d.startX, startY:d.startY, endX:d.endX, endY:d.endY,
+        splitUnit: distU.toUpperCase(),
+        elevLine:epath.line, elevArea:epath.area,
+        elevYTop: fmtAxis(enmax)+' '+elevU, elevYMid: fmtAxis(enmax/2),
+        elevTotal:'+'+fElev(r.elevM)+' '+elevU,
+        splits,
+        kpis:[
+          {label:'DISTANCE', value:fDist(r.distanceKm), unit:distU},
+          {label:'MOVING TIME', value:fDur(r.movingSec), unit:''},
+          {label:'ELEVATION', value:fElev(r.elevM), unit:elevU},
+          {label:'AVG SPEED', value:fSpeed(r.avgKmh), unit:speedU},
+          {label:'AVG HEART RATE', value:String(r.avgHr), unit:'bpm'},
+          {label:'CALORIES', value:r.cal.toLocaleString(), unit:'kcal'}
+        ]
+      };
+    }
+
+    const titleMap = {overview:'Overview', activities:'Activities', trends:'Trends', segments:'Segments', settings:'Settings'};
+    const subMap = {overview:'Your riding at a glance', activities:'All synced rides', trends:'Distance & pace over time', segments:'Personal records', settings:'Preferences & account'};
+    const ready = st.phase === 'ready';
+    const empty = (this.props.demo === 'empty') && ready;
+    const dataView = (st.view==='overview'||st.view==='activities'||st.view==='trends'||st.view==='segments');
+    const emptyCopy = {
+      overview:['No rides yet','Once you record a ride on Strava, it shows up here automatically.'],
+      activities:['No activities','Your synced rides will appear here once you start riding.'],
+      trends:['Nothing to chart yet','Trends show up once you have a few rides logged.'],
+      segments:['No segments yet','Ride some Strava segments to see your efforts and PRs.']
+    };
+    const ec = emptyCopy[st.view] || emptyCopy.overview;
+    const pp = st.progress;
+    const syncStatus = pp<28 ? 'Authorizing with Strava…' : pp<62 ? 'Fetching your activities…' : pp<92 ? 'Crunching your stats…' : 'Almost there…';
+
+    const selRide = (st.view==='ride' && st.rideId) ? (this.rides.find(x=>x.id===st.rideId)||{}) : {};
+    const selSeg = (st.view==='segment' && st.segId) ? (this.segments.find(x=>x.id===st.segId)||{}) : {};
+    let pageTitle = titleMap[st.view], pageSub = subMap[st.view];
+    if (st.view==='ride'){ pageTitle = selRide.name; pageSub = selRide.date; }
+    if (st.view==='segment'){ pageTitle = selSeg.name; pageSub = 'Segment · compare attempts'; }
+
+    return {
+      theme: st.theme, isDark: st.theme==='dark', isLight: st.theme==='light',
+      navItems, periodBtns, unitBtns, themeBtns, kpis,
+      distU, elevU,
+      trendArea:tp.area, trendLine:tp.line, trendLastX:tp.lastX, trendLastY:tp.lastY,
+      trendAreaBig:tpBig.area, trendLineBig:tpBig.line,
+      trendLabels, trendRange:tr.range, trendYTop, trendYMid,
+      recentRides, pageRides, pageRange, pager, prevStyle, nextStyle, actHeaders,
+      actEmpty: total===0, showPager: total>0,
+      actQuery:st.actQuery, actMinDist:st.actMinDist, actMinTime:st.actMinTime, actMinElev:st.actMinElev,
+      setActQuery:(e)=>this.setActQuery(e), setActMinDist:(e)=>this.setActMinDist(e),
+      setActMinTime:(e)=>this.setActMinTime(e), setActMinElev:(e)=>this.setActMinElev(e),
+      clearActFilters:()=>this.clearActFilters(),
+      prevPage: ()=>this.setPage(Math.max(0, page-1)),
+      nextPage: ()=>this.setPage(Math.min(totalPages-1, page+1)),
+      segmentsTop, segments, segEmpty, seg, segSortArrow,
+      sortSegByAttempts: ()=>this.sortSegByAttempts(),
+      segQuery: st.segQuery, setSegQuery:(e)=>this.setSegQuery(e),
+      ride,
+      back: ()=>this.back(),
+      goActivities: ()=>this.setNav('activities'),
+      logOut: ()=>{ window.location.href = encodeURI('Peakstrider Landing.dc.html'); },
+      toggleTheme: ()=>this.setTheme(st.theme==='dark'?'light':'dark'),
+      showOverview: ready && !empty && st.view==='overview',
+      showActivities: ready && !empty && st.view==='activities',
+      showTrends: ready && !empty && st.view==='trends',
+      showSegments: ready && !empty && st.view==='segments',
+      showSettings: ready && st.view==='settings',
+      showRide: ready && !empty && st.view==='ride',
+      showSegment: ready && !empty && st.view==='segment',
+      showBack: ready && (st.view==='ride' || st.view==='segment'),
+      showPeriod: ready && !empty && (st.view==='overview' || st.view==='trends'),
+      showLoading: st.phase==='loading',
+      showEmpty: empty && dataView,
+      emptyTitle: ec[0], emptySub: ec[1],
+      progressW: pp.toFixed(1)+'%', progressPct: Math.round(pp)+'%', syncStatus,
+      resync: ()=>this.resync(),
+      syncLabel: empty ? 'Connected · no rides yet' : 'Strava synced',
+      pageTitle, pageSub
+    };
+  }
+}
+</script>
+</body>
+</html>

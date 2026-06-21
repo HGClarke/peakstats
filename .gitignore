@@ -17,3 +17,6 @@ frontend/dist/
 # SDD scratch
 .superpowers/
 .claude/
+
+# macOS
+.DS_Store

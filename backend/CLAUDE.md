@@ -1,17 +1,28 @@
 # Peakstats Backend — CLAUDE.md
 
-FastAPI service deployed to Render. Handles Strava OAuth, token refresh, activity sync,
-webhooks, and aggregation endpoints. Talks to Supabase Postgres. The SPA never sees
-the Strava client secret — all token handling is server-side.
+FastAPI service deployed to Render. Today it handles Strava OAuth, token storage and
+refresh, and the athlete profile/disconnect endpoints. Activity sync, webhooks, and
+aggregation endpoints are planned. Talks to Supabase Postgres. The SPA never sees the
+Strava client secret — all token handling is server-side.
 
 ## Running the service
 
 ```bash
 cd backend
+pip install -r requirements-dev.txt  # runtime + dev deps (pytest, ruff, mypy)
 uvicorn app.main:app --reload        # dev server (port 8000)
 pytest                               # run all tests
 pytest tests/routers/                # run a subtree
+ruff check .                         # lint (incl. import order + annotations)
+mypy                                 # type-check app/ and tests/
 ```
+
+Production installs only `requirements.txt` (see `render.yaml`); dev/CI tooling
+lives in `requirements-dev.txt`. Tool config (ruff, mypy) is in `pyproject.toml`.
+
+A repo-root `hooks/pre-commit` runs ruff + mypy on the backend before each commit
+(pytest is left to CI). Enable it once per clone with `git config core.hooksPath hooks`;
+bypass in a pinch with `SKIP_HOOKS=1 git commit ...`.
 
 ## Folder structure
 
@@ -21,15 +32,19 @@ backend/
     main.py          # app factory only — no business logic
     config.py        # pydantic-settings; all env vars live here
     deps.py          # FastAPI dependency injectors (supabase client, current_user, etc.)
+    cookies.py       # session/state cookie set+clear helpers (one place for flags)
+    session.py       # cookie signing/verification (framework-agnostic; no fastapi)
+    strava.py        # Strava OAuth + API client wrapper
     routers/         # HTTP layer — thin; delegates immediately to services
-    services/        # Business logic — no FastAPI imports; pure async functions
+    services/        # Business logic — no FastAPI imports; plain functions (sync unless awaiting)
     models/          # Pydantic I/O schemas (request/response bodies), one file per domain
     db/              # Supabase query functions — typed wrappers, one file per table group
   tests/
-    conftest.py      # shared fixtures (TestClient, mock settings, etc.)
-    routers/         # mirrors app/routers/
-    services/        # mirrors app/services/
-    db/              # mirrors app/db/
+    conftest.py            # shared fixtures (TestClient, mock settings, etc.)
+    test_architecture.py   # guard tests enforcing the layering rules below
+    routers/               # mirrors app/routers/
+    services/              # mirrors app/services/
+    db/                    # mirrors app/db/
 ```
 
 ## Architecture rules
@@ -40,10 +55,11 @@ backend/
   Must not contain business logic or direct DB calls.
 - `services/` — all business logic lives here. No `fastapi` imports allowed (use
   plain Python types). Receives dependencies (db client, settings) as arguments.
-- `db/` — typed async wrappers around Supabase. One module per logical table group
-  (athletes, activities, segments, tokens). No business logic.
+- `db/` — typed wrappers around Supabase (sync `httpx`; PostgREST). One module per
+  logical table group (athletes, activities, segments, tokens). No business logic.
+  Each module declares a `TypedDict` for its row shape and returns it (not a raw `dict`).
 - `models/` — Pydantic schemas for request/response bodies. Keep separate from DB
-  row shapes (those live in `db/`).
+  row shapes (those are the `TypedDict`s in `db/`).
 - `deps.py` — all FastAPI `Depends()` callables. This is the only place that calls
   `get_settings()` at request time.
 - `config.py` — `get_settings()` cached with `@lru_cache`. Add every new env var here
@@ -75,7 +91,8 @@ backend/
 - Patch at the service boundary — mock `services.*` functions, not internal DB calls,
   so tests stay decoupled from Supabase.
 - Each test file imports only from `fastapi.testclient` and the module under test.
-  No cross-domain imports between test files.
+  No cross-domain imports between test files. (`test_architecture.py` is the one
+  exception: it statically parses `app/` to enforce the layering rules above.)
 
 ## Adding a new feature
 
@@ -85,6 +102,7 @@ backend/
 4. Add a router to `routers/<domain>.py`; register it in `main.py`.
 5. Add tests mirroring each layer above.
 6. Add any new env vars to `config.py` and `.env.example`.
+7. Run `ruff check .` and `mypy` — both must be clean before committing.
 
 ## Environment variables
 

@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import httpx
 
@@ -9,6 +9,7 @@ from app.strava import StravaClient
 
 
 def get_profile(supabase: httpx.Client, athlete_id: int) -> AthleteResponse | None:
+    """Fetch athlete from the DB and return a response model, or None if not found."""
     row = athletes_db.get_athlete(supabase, athlete_id)
     if row is None:
         return None
@@ -21,11 +22,12 @@ def get_profile(supabase: httpx.Client, athlete_id: int) -> AthleteResponse | No
 
 
 def disconnect(supabase: httpx.Client, strava: StravaClient, athlete_id: int) -> None:
+    """Revoke Strava access (best-effort) and delete all athlete data from the DB."""
     tokens = tokens_db.get_tokens(supabase, athlete_id)
     if tokens:
         access_token = tokens["access_token"]
         expires_at = datetime.fromisoformat(tokens["expires_at"])
-        if expires_at <= datetime.now(timezone.utc) + timedelta(seconds=60):
+        if expires_at <= datetime.now(UTC) + timedelta(seconds=60):
             access_token = strava.refresh(tokens["refresh_token"]).access_token
         try:
             strava.deauthorize(access_token)

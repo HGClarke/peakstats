@@ -10,12 +10,14 @@ def _serializer(secret: str) -> URLSafeTimedSerializer:
 
 
 def sign_session(athlete_id: int, secret: str) -> str:
+    """Return a URL-safe signed token encoding the athlete ID."""
     return _serializer(secret).dumps({"athlete_id": athlete_id})
 
 
 def read_session(
     token: str, secret: str, max_age: int = SESSION_MAX_AGE
 ) -> int | None:
+    """Verify and decode a session token; return the athlete ID or None if invalid/expired."""
     try:
         data = _serializer(secret).loads(token, max_age=max_age)
     except (BadSignature, SignatureExpired):

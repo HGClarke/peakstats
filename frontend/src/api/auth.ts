@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { config } from "@/lib/config";
 import type { Athlete } from "@/types/athlete";
 import { apiFetch } from "./client";
@@ -24,21 +24,11 @@ export type UseAthlete = {
   error: Error | null;
 };
 
-/** Loads the current athlete once on mount; a 401 surfaces as `error`. */
+/** Loads the current athlete; a 401 surfaces as `error` (no retry). */
 export function useAthlete(): UseAthlete {
-  const [data, setData] = useState<Athlete | null>(null);
-  const [error, setError] = useState<Error | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    fetchAthlete().then(
-      (athlete) => active && setData(athlete),
-      (err) => active && setError(err as Error)
-    );
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  return { data, isLoading: data === null && error === null, error };
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["athlete"],
+    queryFn: fetchAthlete,
+  });
+  return { data: data ?? null, isLoading, error: (error as Error) ?? null };
 }

@@ -1,0 +1,52 @@
+# Tool configuration only. Dependencies are managed via requirements.txt
+# (runtime) and requirements-dev.txt (dev/CI) so the Render build stays a plain
+# `pip install -r requirements.txt`.
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["app", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "I",   # isort (import ordering)
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "ANN", # flake8-annotations (enforces type hints on public functions)
+]
+ignore = [
+    "ANN401", # allow explicit Any where unavoidable (e.g. PostgREST JSON)
+]
+
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI's dependency-injection markers are evaluated once at import and are
+# meant to live in argument defaults; they are not the mutable-default footgun
+# that B008 targets.
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.Query",
+    "fastapi.Path",
+    "fastapi.Cookie",
+    "fastapi.Header",
+    "fastapi.Body",
+    "fastapi.Form",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests don't need return-type annotations on every function.
+"tests/**" = ["ANN001", "ANN201", "ANN202", "ANN204"]
+
+[tool.mypy]
+python_version = "3.12"
+files = ["app", "tests"]
+warn_unused_ignores = true
+warn_redundant_casts = true
+disallow_untyped_defs = true
+no_implicit_optional = true
+
+[[tool.mypy.overrides]]
+# Tests patch and pass sentinels; don't force full typing there.
+module = "tests.*"
+disallow_untyped_defs = false

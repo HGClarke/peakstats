@@ -1,9 +1,8 @@
 import pytest
-from fastapi.testclient import TestClient
-
 from app.config import Settings, get_settings
 from app.deps import get_strava, get_supabase
 from app.main import create_app
+from fastapi.testclient import TestClient
 
 
 @pytest.fixture

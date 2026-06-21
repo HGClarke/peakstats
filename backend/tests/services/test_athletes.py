@@ -1,3 +1,5 @@
+from datetime import UTC
+
 from app.models.athlete import AthleteResponse
 from app.services import athletes
 
@@ -24,14 +26,14 @@ def test_get_profile_returns_none_when_missing(monkeypatch):
 
 
 def test_disconnect_deauthorizes_then_deletes(monkeypatch):
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     deleted = {}
     monkeypatch.setattr(
         athletes.tokens_db, "get_tokens",
         lambda supabase, athlete_id: {
             "access_token": "AT", "refresh_token": "RT",
-            "expires_at": datetime(2099, 1, 1, tzinfo=timezone.utc).isoformat()},
+            "expires_at": datetime(2099, 1, 1, tzinfo=UTC).isoformat()},
     )
     monkeypatch.setattr(athletes.athletes_db, "delete_athlete",
                         lambda supabase, athlete_id: deleted.update(id=athlete_id))

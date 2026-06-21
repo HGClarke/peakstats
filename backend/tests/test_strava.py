@@ -1,7 +1,6 @@
-from datetime import timezone
+from datetime import UTC
 
 import httpx
-
 from app.strava import StravaClient
 
 
@@ -40,7 +39,7 @@ def test_exchange_code_parses_token_and_athlete():
     token = _client(handler).exchange_code("abc")
     assert token.access_token == "AT"
     assert token.refresh_token == "RT"
-    assert token.expires_at.tzinfo == timezone.utc
+    assert token.expires_at.tzinfo == UTC
     assert int(token.expires_at.timestamp()) == 1_700_000_000
     assert token.athlete["id"] == 99
 
@@ -70,3 +69,24 @@ def test_deauthorize_posts_access_token():
     _client(handler).deauthorize("AT")
     assert seen["path"] == "/oauth/deauthorize"
     assert seen["body"]["access_token"] == "AT"
+
+
+def test_list_activities_sends_bearer_and_params():
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/api/v3/athlete/activities"
+        assert request.headers["authorization"] == "Bearer AT"
+        assert request.url.params["page"] == "2"
+        assert request.url.params["per_page"] == "200"
+        assert request.url.params["after"] == "1700000000"
+        return httpx.Response(200, json=[{"id": 1}, {"id": 2}])
+
+    acts = _client(handler).list_activities("AT", page=2, per_page=200, after=1_700_000_000)
+    assert acts == [{"id": 1}, {"id": 2}]
+
+
+def test_list_activities_omits_after_when_none():
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert "after" not in request.url.params
+        return httpx.Response(200, json=[])
+
+    assert _client(handler).list_activities("AT", page=1) == []
