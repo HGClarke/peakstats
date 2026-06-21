@@ -1,8 +1,15 @@
 import { LogOut } from "lucide-react";
+import { Link } from "react-router";
 import { Logo } from "@/components/Logo";
 import type { Athlete } from "@/types/athlete";
 
-const NAV_ITEMS = ["Overview", "Activities", "Segments", "Trends", "Goals"];
+const NAV_ITEMS: { label: string; to?: string }[] = [
+  { label: "Overview", to: "/home" },
+  { label: "Activities", to: "/activities" },
+  { label: "Segments" },
+  { label: "Trends" },
+  { label: "Goals" },
+];
 
 function initials(name: string): string {
   return name.split(" ").map((p) => p[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
@@ -25,27 +32,30 @@ export function Sidebar({
         <Logo />
       </div>
       <nav className="flex flex-col gap-1">
-        {NAV_ITEMS.map((label) => {
+        {NAV_ITEMS.map(({ label, to }) => {
           const active = label === navActive;
-          return (
-            <div
-              key={label}
-              className={`flex items-center gap-[11px] px-[11px] py-[9px] rounded-[9px] ${
-                active ? "bg-strava-soft" : ""
-              }`}
-            >
+          const className = `flex items-center gap-[11px] px-[11px] py-[9px] rounded-[9px] ${
+            active ? "bg-strava-soft" : ""
+          }`;
+          const inner = (
+            <>
               <span
-                className={`w-[6px] h-[6px] rounded-full ${
-                  active ? "bg-strava" : "bg-muted5"
-                }`}
+                className={`w-[6px] h-[6px] rounded-full ${active ? "bg-strava" : "bg-muted5"}`}
               />
               <span
-                className={`text-[14px] font-medium ${
-                  active ? "text-ink2" : "text-subtle"
-                }`}
+                className={`text-[14px] font-medium ${active ? "text-ink2" : "text-subtle"}`}
               >
                 {label}
               </span>
+            </>
+          );
+          return to ? (
+            <Link key={label} to={to} className={className}>
+              {inner}
+            </Link>
+          ) : (
+            <div key={label} className={className}>
+              {inner}
             </div>
           );
         })}
