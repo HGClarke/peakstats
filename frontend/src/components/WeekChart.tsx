@@ -1,5 +1,31 @@
 import { AreaChart, Area, XAxis, ResponsiveContainer } from "recharts";
 import type { WeekPoint } from "@/types/ride";
+import { edgeTickAnchor } from "@/components/edge-tick-anchor";
+
+type TickProps = {
+  x?: number;
+  y?: number;
+  index?: number;
+  visibleTicksCount?: number;
+  payload?: { value?: string | number };
+  fill?: string;
+};
+
+function DayTick({ x = 0, y = 0, index = 0, visibleTicksCount = 1, payload, fill }: TickProps) {
+  return (
+    <text
+      x={x}
+      y={y}
+      dy="0.71em"
+      textAnchor={edgeTickAnchor(index, visibleTicksCount)}
+      fontFamily="'JetBrains Mono', monospace"
+      fontSize={11}
+      fill={fill}
+    >
+      {payload?.value}
+    </text>
+  );
+}
 
 export default function WeekChart({
   week,
@@ -21,11 +47,8 @@ export default function WeekChart({
           dataKey="day"
           axisLine={false}
           tickLine={false}
-          tick={{
-            fontFamily: "'JetBrains Mono', monospace",
-            fontSize: 11,
-            fill: isDark ? "#6b7280" : "#8a909a",
-          }}
+          interval={0}
+          tick={<DayTick fill={isDark ? "#6b7280" : "#8a909a"} />}
         />
         <Area
           type="monotone"
