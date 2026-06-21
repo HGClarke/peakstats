@@ -59,3 +59,12 @@ def test_refresh_returns_count(client, monkeypatch):
 
 def test_refresh_requires_session(client):
     assert client.post("/sync/refresh").status_code == 401
+
+
+def test_refresh_conflict_when_not_synced(client, monkeypatch):
+    def not_ready(settings, athlete_id):
+        raise sync_service.SyncNotReadyError("no backfill yet")
+
+    monkeypatch.setattr(sync_service, "refresh", not_ready)
+    _auth(client)
+    assert client.post("/sync/refresh").status_code == 409

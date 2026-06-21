@@ -45,6 +45,7 @@ export function useRefreshSync() {
     mutationFn: refreshSync,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sync", "status"] });
+      queryClient.invalidateQueries({ queryKey: ["activities", "overview"] });
     },
   });
 }

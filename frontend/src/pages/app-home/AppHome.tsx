@@ -1,12 +1,16 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router";
 import { disconnect, logout, useAthlete } from "@/api/auth";
+import { useOverview } from "@/api/overview";
 import { useRefreshSync, useSyncStatus } from "@/api/sync";
 import { AppShell } from "@/components/app-shell/AppShell";
+import { DistancePanel } from "./components/DistancePanel";
+import { KpiCards } from "./components/KpiCards";
+import { RecentRidesPanel } from "./components/RecentRidesPanel";
 
 function SkeletonPanels() {
   return (
-    <div className="p-7">
+    <div className="p-7" role="status" aria-label="Loading overview">
       <div className="grid grid-cols-4 gap-4 mb-[18px] max-[1024px]:grid-cols-2">
         {[0, 1, 2, 3].map((i) => (
           <div key={i} className="bg-surface-card border border-line rounded-2xl p-5">
@@ -27,6 +31,7 @@ function SkeletonPanels() {
 export default function AppHome() {
   const { data: athlete, error } = useAthlete();
   const { data: status } = useSyncStatus();
+  const { data: overview, isLoading } = useOverview();
   const refreshSync = useRefreshSync();
   const navigate = useNavigate();
 
@@ -37,6 +42,8 @@ export default function AppHome() {
   useEffect(() => {
     if (status?.status === "never_synced") navigate("/sync", { replace: true });
   }, [status, navigate]);
+
+  const synced = status?.status === "idle";
 
   const handleLogout = async () => {
     await logout();
@@ -52,22 +59,30 @@ export default function AppHome() {
     <AppShell
       navActive="Overview"
       athlete={athlete}
-      syncLabel="Up to date"
+      syncLabel={synced ? "Up to date" : "Syncing…"}
       onLogout={handleLogout}
       title="Overview"
-      subtitle="UP TO DATE"
+      subtitle={synced ? "UP TO DATE" : "SYNCING"}
       headerRight={
         <button
           onClick={() => refreshSync.mutate()}
-          disabled={refreshSync.isPending}
-          className="h-[38px] px-4 rounded-[10px] bg-strava text-white font-display font-medium text-[13px] cursor-pointer hover:bg-strava-hover disabled:opacity-60"
+          disabled={!synced || refreshSync.isPending}
+          className="h-[38px] px-4 rounded-[10px] bg-strava text-white font-display font-medium text-[13px] cursor-pointer hover:bg-strava-hover disabled:opacity-60 disabled:cursor-not-allowed"
         >
           Refresh from Strava
         </button>
       }
     >
       <div className="h-full overflow-y-auto">
-        <SkeletonPanels />
+        {isLoading || !overview ? (
+          <SkeletonPanels />
+        ) : (
+          <div className="p-7">
+            <KpiCards kpis={overview.kpis} />
+            <DistancePanel week={overview.week} />
+            <RecentRidesPanel rides={overview.recentRides} />
+          </div>
+        )}
         <div className="px-7 pb-10">
           <button
             onClick={handleDisconnect}

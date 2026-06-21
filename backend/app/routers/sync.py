@@ -37,5 +37,9 @@ def refresh(
 ) -> RefreshResponse:
     try:
         return sync_service.refresh(settings, athlete_id)
+    except sync_service.SyncNotReadyError as exc:
+        raise HTTPException(
+            status_code=409, detail="Initial sync has not completed yet"
+        ) from exc
     except Exception as exc:  # noqa: BLE001 - surface upstream failures as 502
         raise HTTPException(status_code=502, detail="Refresh from Strava failed") from exc

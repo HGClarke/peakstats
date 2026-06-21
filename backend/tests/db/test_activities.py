@@ -48,3 +48,33 @@ def test_count_activities_handles_star_range():
         return httpx.Response(200, json=[], headers={"Content-Range": "*/0"})
 
     assert activities.count_activities(_client(handler), 7) == 0
+
+
+def test_list_activities_since_filters_and_orders():
+    seen = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["params"] = dict(request.url.params)
+        return httpx.Response(200, json=[{"id": 1, "athlete_id": 7, "name": "Ride"}])
+
+    rows = activities.list_activities_since(
+        _client(handler), 7, "2026-06-08T00:00:00+00:00"
+    )
+    assert seen["params"]["athlete_id"] == "eq.7"
+    assert seen["params"]["start_date"] == "gte.2026-06-08T00:00:00+00:00"
+    assert seen["params"]["order"] == "start_date.asc"
+    assert rows == [{"id": 1, "athlete_id": 7, "name": "Ride"}]
+
+
+def test_list_recent_activities_orders_desc_and_limits():
+    seen = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["params"] = dict(request.url.params)
+        return httpx.Response(200, json=[{"id": 9, "athlete_id": 7, "name": "Ride"}])
+
+    rows = activities.list_recent_activities(_client(handler), 7, limit=5)
+    assert seen["params"]["athlete_id"] == "eq.7"
+    assert seen["params"]["order"] == "start_date.desc"
+    assert seen["params"]["limit"] == "5"
+    assert rows == [{"id": 9, "athlete_id": 7, "name": "Ride"}]
