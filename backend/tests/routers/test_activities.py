@@ -1,4 +1,8 @@
+from datetime import UTC, datetime
+
 from app.models.activities import (
+    ActivityListItem,
+    ActivityListResponse,
     OverviewResponse,
     RecentRideItem,
     WeekDay,
@@ -40,3 +44,47 @@ def test_overview_returns_body(client, monkeypatch):
     assert body["this_week"]["distance_m"] == 30000.0
     assert len(body["week"]) == 7
     assert body["recent_rides"][0]["name"] == "Tue ride"
+
+
+def _list_response() -> ActivityListResponse:
+    return ActivityListResponse(
+        activities=[ActivityListItem(
+            id=2, name="Wed ride", type="Ride", start_date="2026-06-17T09:00:00Z",
+            distance_m=20000.0, moving_time_s=2000, elev_gain_m=50.0, avg_speed_ms=10.0,
+        )],
+        page=1, page_size=9, total=1, total_pages=1,
+        as_of=datetime(2026, 6, 21, 12, 0, tzinfo=UTC),
+    )
+
+
+def test_list_requires_session(client):
+    assert client.get("/activities").status_code == 401
+
+
+def test_list_returns_body(client, monkeypatch):
+    captured: dict = {}
+
+    def fake(supabase, athlete_id, **kwargs: object) -> ActivityListResponse:
+        captured.update(kwargs)
+        return _list_response()
+
+    monkeypatch.setattr(activities_service, "list_activities", fake)
+    _auth(client)
+    response = client.get("/activities?sort=distance&direction=asc&page=1&min_dist=1000")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 1
+    assert body["activities"][0]["name"] == "Wed ride"
+    assert captured["sort"] == "distance"
+    assert captured["direction"] == "asc"
+    assert captured["min_dist"] == 1000.0
+
+
+def test_list_rejects_bad_sort(client):
+    _auth(client)
+    assert client.get("/activities?sort=bogus").status_code == 422
+
+
+def test_list_rejects_bad_as_of(client):
+    _auth(client)
+    assert client.get("/activities?as_of=not-a-date").status_code == 422
