@@ -101,5 +101,14 @@ class StravaClient:
         response.raise_for_status()
         return response.json()
 
+    def get_activity(self, access_token: str, activity_id: int) -> dict:
+        """Fetch a single detailed activity by id; raises on HTTP error."""
+        response = self._http.get(
+            f"{API_BASE_URL}/activities/{activity_id}",
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
+        response.raise_for_status()
+        return response.json()
+
     def close(self) -> None:
         self._http.close()

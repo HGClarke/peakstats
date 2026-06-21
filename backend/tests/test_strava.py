@@ -90,3 +90,14 @@ def test_list_activities_omits_after_when_none():
         return httpx.Response(200, json=[])
 
     assert _client(handler).list_activities("AT", page=1) == []
+
+
+def test_get_activity_sends_bearer_and_path():
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/api/v3/activities/12345"
+        assert request.headers["authorization"] == "Bearer AT"
+        return httpx.Response(200, json={"id": 12345, "name": "Evening ride"})
+
+    activity = _client(handler).get_activity("AT", 12345)
+    assert activity["id"] == 12345
+    assert activity["name"] == "Evening ride"
