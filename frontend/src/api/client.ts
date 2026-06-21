@@ -21,6 +21,7 @@ export async function apiFetch<T>(
 ): Promise<T> {
   const response = await fetch(`${config.apiBaseUrl}${path}`, {
     ...init,
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
       ...init?.headers,
@@ -32,6 +33,10 @@ export async function apiFetch<T>(
       response.status,
       `Request to ${path} failed: ${response.status} ${response.statusText}`
     );
+  }
+
+  if (response.status === 204 || response.headers.get("content-length") === "0") {
+    return undefined as T;
   }
 
   return (await response.json()) as T;
