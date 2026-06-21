@@ -1,4 +1,4 @@
-from typing import TypedDict, cast
+from typing import NotRequired, TypedDict, cast
 
 import httpx
 
@@ -18,6 +18,7 @@ class ActivityRow(TypedDict):
     avg_speed_ms: float | None
     avg_hr: int | None
     summary_polyline: str | None
+    created_at: NotRequired[str]
 
 
 def upsert_activities(client: httpx.Client, rows: list[ActivityRow]) -> None:
