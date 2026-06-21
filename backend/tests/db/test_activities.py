@@ -78,3 +78,61 @@ def test_list_recent_activities_orders_desc_and_limits():
     assert seen["params"]["order"] == "start_date.desc"
     assert seen["params"]["limit"] == "5"
     assert rows == [{"id": 9, "athlete_id": 7, "name": "Ride"}]
+
+
+def test_list_activities_filtered_builds_params_and_parses_total():
+    seen = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["params"] = dict(request.url.params)
+        seen["prefer"] = request.headers.get("prefer")
+        seen["range"] = request.headers.get("range")
+        return httpx.Response(
+            200,
+            json=[{"id": 9, "athlete_id": 7, "name": "Ride"}],
+            headers={"Content-Range": "0-8/42"},
+        )
+
+    rows, total = activities.list_activities_filtered(
+        _client(handler), 7,
+        q="loop", min_dist=1000.0, min_time=600, min_elev=50.0,
+        order="distance_m.desc,id.desc",
+        as_of="2026-06-21T12:00:00+00:00",
+        offset=0, limit=9,
+    )
+    p = seen["params"]
+    assert p["athlete_id"] == "eq.7"
+    assert p["created_at"] == "lte.2026-06-21T12:00:00+00:00"
+    assert p["name"] == "ilike.*loop*"
+    assert p["distance_m"] == "gte.1000.0"
+    assert p["moving_time_s"] == "gte.600"
+    assert p["elev_gain_m"] == "gte.50.0"
+    assert p["order"] == "distance_m.desc,id.desc"
+    assert p["select"] == "*"
+    assert seen["prefer"] == "count=exact"
+    assert seen["range"] == "0-8"
+    assert total == 42
+    assert rows == [{"id": 9, "athlete_id": 7, "name": "Ride"}]
+
+
+def test_list_activities_filtered_omits_empty_filters():
+    seen = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["params"] = dict(request.url.params)
+        return httpx.Response(200, json=[], headers={"Content-Range": "*/0"})
+
+    rows, total = activities.list_activities_filtered(
+        _client(handler), 7,
+        q=None, min_dist=None, min_time=None, min_elev=None,
+        order="start_date.desc,id.desc",
+        as_of="2026-06-21T12:00:00+00:00",
+        offset=0, limit=9,
+    )
+    p = seen["params"]
+    assert "name" not in p
+    assert "distance_m" not in p
+    assert "moving_time_s" not in p
+    assert "elev_gain_m" not in p
+    assert total == 0
+    assert rows == []

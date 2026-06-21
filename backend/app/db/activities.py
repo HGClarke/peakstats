@@ -65,6 +65,11 @@ def list_recent_activities(
     return cast(list[ActivityRow], response.json())
 
 
+def _parse_total(response: httpx.Response) -> int:
+    total = response.headers.get("Content-Range", "").split("/")[-1]
+    return int(total) if total.isdigit() else 0
+
+
 def count_activities(client: httpx.Client, athlete_id: int) -> int:
     response = client.get(
         "/activities",
@@ -72,6 +77,40 @@ def count_activities(client: httpx.Client, athlete_id: int) -> int:
         headers={"Prefer": "count=exact", "Range": "0-0"},
     )
     response.raise_for_status()
-    content_range = response.headers.get("Content-Range", "")
-    total = content_range.split("/")[-1]
-    return int(total) if total.isdigit() else 0
+    return _parse_total(response)
+
+
+def list_activities_filtered(
+    client: httpx.Client,
+    athlete_id: int,
+    *,
+    q: str | None,
+    min_dist: float | None,
+    min_time: int | None,
+    min_elev: float | None,
+    order: str,
+    as_of: str,
+    offset: int,
+    limit: int,
+) -> tuple[list[ActivityRow], int]:
+    params: dict[str, str] = {
+        "athlete_id": f"eq.{athlete_id}",
+        "created_at": f"lte.{as_of}",
+        "order": order,
+        "select": "*",
+    }
+    if q:
+        params["name"] = f"ilike.*{q}*"
+    if min_dist is not None:
+        params["distance_m"] = f"gte.{min_dist}"
+    if min_time is not None:
+        params["moving_time_s"] = f"gte.{min_time}"
+    if min_elev is not None:
+        params["elev_gain_m"] = f"gte.{min_elev}"
+    response = client.get(
+        "/activities",
+        params=params,
+        headers={"Prefer": "count=exact", "Range": f"{offset}-{offset + limit - 1}"},
+    )
+    response.raise_for_status()
+    return cast(list[ActivityRow], response.json()), _parse_total(response)
