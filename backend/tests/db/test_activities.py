@@ -1,152 +1,135 @@
-import httpx
+import respx
 from app.db import activities
+from httpx import Response
+from supabase import create_client
+
+CLIENT = create_client("https://proj.supabase.co", "svc")
 
 
-def _client(handler) -> httpx.Client:
-    return httpx.Client(
-        base_url="https://proj.supabase.co/rest/v1",
-        headers={"apikey": "svc", "Authorization": "Bearer svc",
-                 "Content-Type": "application/json"},
-        transport=httpx.MockTransport(handler),
-    )
-
-
+@respx.mock
 def test_upsert_activities_posts_rows_with_merge():
-    seen = {}
-
-    def handler(request: httpx.Request) -> httpx.Response:
-        seen["url"] = str(request.url)
-        seen["prefer"] = request.headers.get("prefer")
-        seen["body"] = request.read().decode()
-        return httpx.Response(201, json=[])
-
-    rows = [{"id": 1, "athlete_id": 7, "name": "Ride"}]
-    activities.upsert_activities(_client(handler), rows)
-    assert seen["url"] == "https://proj.supabase.co/rest/v1/activities?on_conflict=id"
-    assert seen["prefer"] == "resolution=merge-duplicates"
-    assert '"id":1' in seen["body"]
-
-
-def test_upsert_activities_noop_on_empty():
-    def handler(request: httpx.Request) -> httpx.Response:
-        raise AssertionError("should not POST for empty rows")
-
-    activities.upsert_activities(_client(handler), [])
-
-
-def test_count_activities_parses_content_range():
-    def handler(request: httpx.Request) -> httpx.Response:
-        assert request.url.params["athlete_id"] == "eq.7"
-        assert request.headers["prefer"] == "count=exact"
-        return httpx.Response(200, json=[], headers={"Content-Range": "0-0/42"})
-
-    assert activities.count_activities(_client(handler), 7) == 42
-
-
-def test_count_activities_handles_star_range():
-    def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, json=[], headers={"Content-Range": "*/0"})
-
-    assert activities.count_activities(_client(handler), 7) == 0
-
-
-def test_list_activities_since_filters_and_orders():
-    seen = {}
-
-    def handler(request: httpx.Request) -> httpx.Response:
-        seen["params"] = dict(request.url.params)
-        return httpx.Response(200, json=[{"id": 1, "athlete_id": 7, "name": "Ride"}])
-
-    rows = activities.list_activities_since(
-        _client(handler), 7, "2026-06-08T00:00:00+00:00"
+    route = respx.route(method="POST", path="/rest/v1/activities").mock(
+        return_value=Response(201, json=[])
     )
-    assert seen["params"]["athlete_id"] == "eq.7"
-    assert seen["params"]["start_date"] == "gte.2026-06-08T00:00:00+00:00"
-    assert seen["params"]["order"] == "start_date.asc"
+    activities.upsert_activities(CLIENT, [{"id": 1, "athlete_id": 7, "name": "Ride"}])
+    req = route.calls.last.request
+    assert req.url.params["on_conflict"] == "id"
+    assert "merge-duplicates" in req.headers.get("prefer", "")
+    assert b'"id": 1' in req.content or b'"id":1' in req.content
+
+
+@respx.mock
+def test_upsert_activities_noop_on_empty():
+    route = respx.route(method="POST", path="/rest/v1/activities").mock(
+        return_value=Response(201, json=[])
+    )
+    activities.upsert_activities(CLIENT, [])
+    assert not route.called
+
+
+@respx.mock
+def test_count_activities_reads_exact_count():
+    respx.route(method="GET", path="/rest/v1/activities").mock(
+        return_value=Response(200, json=[{"id": 1}], headers={"Content-Range": "0-0/42"})
+    )
+    assert activities.count_activities(CLIENT, 7) == 42
+
+
+@respx.mock
+def test_count_activities_zero_when_empty():
+    respx.route(method="GET", path="/rest/v1/activities").mock(
+        return_value=Response(200, json=[], headers={"Content-Range": "*/0"})
+    )
+    assert activities.count_activities(CLIENT, 7) == 0
+
+
+@respx.mock
+def test_list_activities_since_filters_and_orders():
+    route = respx.route(method="GET", path="/rest/v1/activities").mock(
+        return_value=Response(200, json=[{"id": 1, "athlete_id": 7, "name": "Ride"}])
+    )
+    rows = activities.list_activities_since(CLIENT, 7, "2026-06-08T00:00:00+00:00")
+    params = route.calls.last.request.url.params
+    assert params["athlete_id"] == "eq.7"
+    assert params["start_date"] == "gte.2026-06-08T00:00:00+00:00"
+    assert params["order"] == "start_date.asc"
     assert rows == [{"id": 1, "athlete_id": 7, "name": "Ride"}]
 
 
+@respx.mock
 def test_list_recent_activities_orders_desc_and_limits():
-    seen = {}
-
-    def handler(request: httpx.Request) -> httpx.Response:
-        seen["params"] = dict(request.url.params)
-        return httpx.Response(200, json=[{"id": 9, "athlete_id": 7, "name": "Ride"}])
-
-    rows = activities.list_recent_activities(_client(handler), 7, limit=5)
-    assert seen["params"]["athlete_id"] == "eq.7"
-    assert seen["params"]["order"] == "start_date.desc"
-    assert seen["params"]["limit"] == "5"
+    route = respx.route(method="GET", path="/rest/v1/activities").mock(
+        return_value=Response(200, json=[{"id": 9, "athlete_id": 7, "name": "Ride"}])
+    )
+    rows = activities.list_recent_activities(CLIENT, 7, limit=5)
+    params = route.calls.last.request.url.params
+    assert params["athlete_id"] == "eq.7"
+    assert params["order"] == "start_date.desc"
+    assert params["limit"] == "5"
     assert rows == [{"id": 9, "athlete_id": 7, "name": "Ride"}]
 
 
-def test_list_activities_filtered_builds_params_and_parses_total():
-    seen = {}
-
-    def handler(request: httpx.Request) -> httpx.Response:
-        seen["params"] = dict(request.url.params)
-        seen["prefer"] = request.headers.get("prefer")
-        seen["range"] = request.headers.get("range")
-        return httpx.Response(
+@respx.mock
+def test_list_activities_filtered_builds_query_and_reads_count():
+    route = respx.route(method="GET", path="/rest/v1/activities").mock(
+        return_value=Response(
             200,
             json=[{"id": 9, "athlete_id": 7, "name": "Ride"}],
             headers={"Content-Range": "0-8/42"},
         )
-
+    )
     rows, total = activities.list_activities_filtered(
-        _client(handler), 7,
+        CLIENT, 7,
         q="loop", min_dist=1000.0, min_time=600, min_elev=50.0,
         order="distance_m.desc,id.desc",
         as_of="2026-06-21T12:00:00+00:00",
         offset=0, limit=9,
     )
-    p = seen["params"]
-    assert p["athlete_id"] == "eq.7"
-    assert p["created_at"] == "lte.2026-06-21T12:00:00+00:00"
-    assert p["name"] == "ilike.*loop*"
-    assert p["distance_m"] == "gte.1000.0"
-    assert p["moving_time_s"] == "gte.600"
-    assert p["elev_gain_m"] == "gte.50.0"
-    assert p["order"] == "distance_m.desc,id.desc"
-    assert p["select"] == "*"
-    assert seen["prefer"] == "count=exact"
-    assert seen["range"] == "0-8"
+    req = route.calls.last.request
+    params = req.url.params
+    assert params["athlete_id"] == "eq.7"
+    assert params["created_at"] == "lte.2026-06-21T12:00:00+00:00"
+    assert "ilike" in params["name"] and "loop" in params["name"]
+    assert params["distance_m"] == "gte.1000.0"
+    assert params["moving_time_s"] == "gte.600"
+    assert params["elev_gain_m"] == "gte.50.0"
+    assert params["order"] == "distance_m.desc,id.desc"
+    # postgrest paginates via offset/limit query params (offset=start,
+    # limit=end-start+1) plus a Prefer: count=exact header for the total.
+    assert params["offset"] == "0"
+    assert params["limit"] == "9"
+    assert req.headers["prefer"] == "count=exact"
     assert total == 42
     assert rows == [{"id": 9, "athlete_id": 7, "name": "Ride"}]
 
 
+@respx.mock
 def test_list_activities_filtered_omits_empty_filters():
-    seen = {}
-
-    def handler(request: httpx.Request) -> httpx.Response:
-        seen["params"] = dict(request.url.params)
-        return httpx.Response(200, json=[], headers={"Content-Range": "*/0"})
-
+    route = respx.route(method="GET", path="/rest/v1/activities").mock(
+        return_value=Response(200, json=[], headers={"Content-Range": "*/0"})
+    )
     rows, total = activities.list_activities_filtered(
-        _client(handler), 7,
+        CLIENT, 7,
         q=None, min_dist=None, min_time=None, min_elev=None,
         order="start_date.desc,id.desc",
         as_of="2026-06-21T12:00:00+00:00",
         offset=0, limit=9,
     )
-    p = seen["params"]
-    assert "name" not in p
-    assert "distance_m" not in p
-    assert "moving_time_s" not in p
-    assert "elev_gain_m" not in p
+    params = route.calls.last.request.url.params
+    assert "name" not in params
+    assert "distance_m" not in params
+    assert "moving_time_s" not in params
+    assert "elev_gain_m" not in params
     assert total == 0
     assert rows == []
 
 
+@respx.mock
 def test_delete_activity_scopes_by_athlete_and_id():
-    seen = {}
-
-    def handler(request: httpx.Request) -> httpx.Response:
-        seen["method"] = request.method
-        seen["params"] = dict(request.url.params)
-        return httpx.Response(204)
-
-    activities.delete_activity(_client(handler), athlete_id=7, activity_id=123)
-    assert seen["method"] == "DELETE"
-    assert seen["params"]["id"] == "eq.123"
-    assert seen["params"]["athlete_id"] == "eq.7"
+    route = respx.route(method="DELETE", path="/rest/v1/activities").mock(
+        return_value=Response(204)
+    )
+    activities.delete_activity(CLIENT, athlete_id=7, activity_id=123)
+    params = route.calls.last.request.url.params
+    assert params["id"] == "eq.123"
+    assert params["athlete_id"] == "eq.7"

@@ -3,8 +3,7 @@ from app.services import sync as sync_service
 
 
 class FakeSupabase:
-    def close(self) -> None:
-        pass
+    pass
 
 
 def test_to_activity_row_maps_summary_fields():
@@ -87,8 +86,6 @@ def test_get_status_backfilling_preserved(monkeypatch):
 def test_refresh_raises_when_never_backfilled(monkeypatch):
     import pytest
 
-    monkeypatch.setattr(sync_service, "build_supabase", lambda settings: FakeSupabase())
-
     class FakeStrava:
         def close(self):
             pass
@@ -105,7 +102,7 @@ def test_refresh_raises_when_never_backfilled(monkeypatch):
     monkeypatch.setattr(sync_service.sync_state_db, "upsert_sync_state", fail_upsert)
 
     with pytest.raises(sync_service.SyncNotReadyError):
-        sync_service.refresh(settings=object(), athlete_id=7)
+        sync_service.refresh(FakeSupabase(), settings=object(), athlete_id=7)
 
 
 def test_start_backfill_starts_when_idle(monkeypatch):
@@ -160,7 +157,6 @@ def test_run_backfill_paginates_and_finalizes(monkeypatch):
         def close(self):
             pass
 
-    monkeypatch.setattr(sync_service, "build_supabase", lambda settings: FakeSupabase())
     monkeypatch.setattr(sync_service, "build_strava", lambda settings: FakeStrava())
     monkeypatch.setattr(sync_service, "get_valid_access_token",
                         lambda supabase, strava, athlete_id: "AT")
@@ -169,7 +165,7 @@ def test_run_backfill_paginates_and_finalizes(monkeypatch):
     monkeypatch.setattr(sync_service.sync_state_db, "upsert_sync_state",
                         lambda supabase, athlete_id, fields: states.append(fields))
 
-    sync_service.run_backfill(settings=object(), athlete_id=7)
+    sync_service.run_backfill(FakeSupabase(), settings=object(), athlete_id=7)
 
     assert upserts == [200, 1]
     assert states[-1]["status"] == "idle"
@@ -179,7 +175,6 @@ def test_run_backfill_paginates_and_finalizes(monkeypatch):
 
 def test_run_backfill_sets_error_on_failure(monkeypatch):
     states = []
-    monkeypatch.setattr(sync_service, "build_supabase", lambda settings: FakeSupabase())
 
     class BoomStrava:
         def close(self):
@@ -194,7 +189,7 @@ def test_run_backfill_sets_error_on_failure(monkeypatch):
     monkeypatch.setattr(sync_service.sync_state_db, "upsert_sync_state",
                         lambda supabase, athlete_id, fields: states.append(fields))
 
-    sync_service.run_backfill(settings=object(), athlete_id=7)
+    sync_service.run_backfill(FakeSupabase(), settings=object(), athlete_id=7)
     assert states[-1] == {"status": "error"}
 
 
@@ -213,7 +208,6 @@ def test_refresh_pulls_since_last_sync(monkeypatch):
         def close(self):
             pass
 
-    monkeypatch.setattr(sync_service, "build_supabase", lambda settings: FakeSupabase())
     monkeypatch.setattr(sync_service, "build_strava", lambda settings: FakeStrava())
     monkeypatch.setattr(sync_service, "get_valid_access_token",
                         lambda supabase, strava, athlete_id: "AT")
@@ -228,7 +222,7 @@ def test_refresh_pulls_since_last_sync(monkeypatch):
     monkeypatch.setattr(sync_service.sync_state_db, "upsert_sync_state",
                         lambda supabase, athlete_id, fields: final_fields.update(fields))
 
-    result = sync_service.refresh(settings=object(), athlete_id=7)
+    result = sync_service.refresh(FakeSupabase(), settings=object(), athlete_id=7)
     assert result.synced == 1
     assert captured["after"] is not None
     assert "status" not in final_fields

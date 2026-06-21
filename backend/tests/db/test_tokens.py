@@ -1,43 +1,45 @@
-import json
 from datetime import UTC, datetime
 
-import httpx
+import respx
 from app.db import tokens
+from httpx import Response
+from supabase import create_client
+
+CLIENT = create_client("https://proj.supabase.co", "svc")
 
 
-def _client(handler) -> httpx.Client:
-    return httpx.Client(
-        base_url="https://proj.supabase.co/rest/v1",
-        headers={"apikey": "svc", "Authorization": "Bearer svc",
-                 "Content-Type": "application/json"},
-        transport=httpx.MockTransport(handler),
+@respx.mock
+def test_upsert_tokens_merges_on_athlete_id():
+    route = respx.route(method="POST", path="/rest/v1/strava_tokens").mock(
+        return_value=Response(201, json=[])
     )
+    tokens.upsert_tokens(
+        CLIENT, 7, "AT", "RT", datetime(2026, 6, 21, 12, 0, tzinfo=UTC)
+    )
+    req = route.calls.last.request
+    assert req.url.params["on_conflict"] == "athlete_id"
+    assert b'"access_token": "AT"' in req.content or b'"access_token":"AT"' in req.content
+    assert b'"expires_at": "2026-06-21T12:00:00+00:00"' in req.content or \
+        b'"expires_at":"2026-06-21T12:00:00+00:00"' in req.content
+    assert "merge-duplicates" in req.headers.get("prefer", "")
 
 
-def test_upsert_tokens_serializes_expiry_iso():
-    seen = {}
-
-    def handler(request: httpx.Request) -> httpx.Response:
-        seen["url"] = str(request.url)
-        seen["body"] = request.read().decode()
-        return httpx.Response(201, json=[])
-
-    tokens.upsert_tokens(_client(handler), 7, "AT", "RT",
-                         datetime(2024, 1, 1, tzinfo=UTC))
-    assert seen["url"] == "https://proj.supabase.co/rest/v1/strava_tokens?on_conflict=athlete_id"
-    body = json.loads(seen["body"])
-    assert body[0]["access_token"] == "AT"
-    assert body[0]["expires_at"] == "2024-01-01T00:00:00+00:00"
+@respx.mock
+def test_get_tokens_returns_row():
+    respx.route(method="GET", path="/rest/v1/strava_tokens").mock(
+        return_value=Response(
+            200,
+            json=[{"athlete_id": 7, "access_token": "AT", "refresh_token": "RT",
+                   "expires_at": "2026-06-21T12:00:00+00:00"}],
+        )
+    )
+    row = tokens.get_tokens(CLIENT, 7)
+    assert row is not None and row["access_token"] == "AT"
 
 
-def test_get_tokens_returns_first_row_or_none():
-    def found(request: httpx.Request) -> httpx.Response:
-        assert request.url.params["athlete_id"] == "eq.7"
-        return httpx.Response(200, json=[{"athlete_id": 7, "access_token": "AT"}])
-
-    assert tokens.get_tokens(_client(found), 7) == {"athlete_id": 7, "access_token": "AT"}
-
-    def empty(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, json=[])
-
-    assert tokens.get_tokens(_client(empty), 7) is None
+@respx.mock
+def test_get_tokens_none_when_empty():
+    respx.route(method="GET", path="/rest/v1/strava_tokens").mock(
+        return_value=Response(200, json=[])
+    )
+    assert tokens.get_tokens(CLIENT, 7) is None

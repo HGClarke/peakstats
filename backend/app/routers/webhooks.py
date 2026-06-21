@@ -3,8 +3,10 @@ import logging
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from pydantic import ValidationError
+from supabase import Client
 
 from app.config import Settings, get_settings
+from app.deps import get_supabase
 from app.models.webhooks import StravaWebhookEvent
 from app.services import webhooks as webhooks_service
 
@@ -29,6 +31,7 @@ async def receive_event(
     request: Request,
     background_tasks: BackgroundTasks,
     settings: Settings = Depends(get_settings),
+    supabase: Client = Depends(get_supabase),
 ) -> dict[str, str]:
     try:
         payload = await request.json()
@@ -36,5 +39,7 @@ async def receive_event(
     except (ValueError, ValidationError):
         logger.warning("Ignoring malformed Strava webhook payload")
         return {"status": "ignored"}
-    background_tasks.add_task(webhooks_service.process_event, settings, event)
+    background_tasks.add_task(
+        webhooks_service.process_event, supabase, settings, event
+    )
     return {"status": "accepted"}

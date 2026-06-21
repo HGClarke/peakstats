@@ -1,9 +1,9 @@
 from collections.abc import Iterator
 
-import httpx
 from fastapi import Depends, HTTPException, Request
+from supabase import Client
 
-from app.clients import build_strava, build_supabase
+from app.clients import build_strava
 from app.config import Settings, get_settings
 from app.session import SESSION_COOKIE, read_session
 from app.strava import StravaClient
@@ -11,13 +11,9 @@ from app.strava import StravaClient
 __all__ = ["get_settings", "get_supabase", "get_strava", "get_current_athlete_id"]
 
 
-def get_supabase(settings: Settings = Depends(get_settings)) -> Iterator[httpx.Client]:
-    """Yield a short-lived httpx client pre-configured for the Supabase REST API."""
-    client = build_supabase(settings)
-    try:
-        yield client
-    finally:
-        client.close()
+def get_supabase(request: Request) -> Client:
+    """Return the process-wide shared Supabase client (created in the app lifespan)."""
+    return request.app.state.supabase
 
 
 def get_strava(settings: Settings = Depends(get_settings)) -> Iterator[StravaClient]:

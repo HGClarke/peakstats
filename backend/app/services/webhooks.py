@@ -1,6 +1,8 @@
 import logging
 
-from app.clients import build_strava, build_supabase
+from supabase import Client
+
+from app.clients import build_strava
 from app.config import Settings
 from app.db import activities as activities_db
 from app.db import athletes as athletes_db
@@ -12,12 +14,14 @@ from app.services.tokens import get_valid_access_token
 logger = logging.getLogger(__name__)
 
 
-def process_event(settings: Settings, event: StravaWebhookEvent) -> None:
+def process_event(
+    supabase: Client, settings: Settings, event: StravaWebhookEvent
+) -> None:
     """Ingest one Strava webhook event: fetch+upsert or delete the activity.
 
-    Runs as a background task. Builds its own clients; ignores non-activity,
-    foreign-subscription, and unknown-owner events; and swallows errors (we have
-    already returned 200 to Strava).
+    Runs as a background task on the shared Supabase client. Builds its own Strava
+    client; ignores non-activity, foreign-subscription, and unknown-owner events;
+    and swallows errors (we have already returned 200 to Strava).
     """
     if event.object_type != "activity":
         logger.info("Ignoring non-activity webhook event: %s", event.object_type)
@@ -30,7 +34,6 @@ def process_event(settings: Settings, event: StravaWebhookEvent) -> None:
                        event.subscription_id)
         return
 
-    supabase = build_supabase(settings)
     strava = build_strava(settings)
     try:
         if athletes_db.get_athlete(supabase, event.owner_id) is None:
@@ -51,5 +54,4 @@ def process_event(settings: Settings, event: StravaWebhookEvent) -> None:
     except Exception:
         logger.exception("Failed to process webhook for athlete %s", event.owner_id)
     finally:
-        supabase.close()
         strava.close()

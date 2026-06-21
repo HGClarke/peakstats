@@ -2,7 +2,7 @@ from datetime import UTC, datetime, timedelta
 from math import ceil
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-import httpx
+from supabase import Client
 
 from app.db import activities as activities_db
 from app.db.activities import ActivityRow
@@ -60,7 +60,7 @@ def _totals(rows: list[ActivityRow]) -> WeekTotals:
 
 
 def get_overview(
-    supabase: httpx.Client,
+    supabase: Client,
     athlete_id: int,
     tz: str = "UTC",
     now: datetime | None = None,
@@ -118,7 +118,7 @@ def get_overview(
 
 
 def list_activities(
-    supabase: httpx.Client,
+    supabase: Client,
     athlete_id: int,
     *,
     q: str | None,

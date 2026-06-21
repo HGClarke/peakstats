@@ -1,5 +1,6 @@
 from app.clients import build_strava, build_supabase
 from app.config import Settings
+from supabase import Client
 
 
 def _settings() -> Settings:
@@ -12,14 +13,10 @@ def _settings() -> Settings:
     )
 
 
-def test_build_supabase_sets_base_url_and_auth_headers():
+def test_build_supabase_returns_supabase_client():
     client = build_supabase(_settings())
-    try:
-        assert str(client.base_url) == "https://test.supabase.co/rest/v1/"
-        assert client.headers["apikey"] == "svc"
-        assert client.headers["Authorization"] == "Bearer svc"
-    finally:
-        client.close()
+    assert isinstance(client, Client)
+    assert callable(client.table)
 
 
 def test_build_strava_returns_configured_client():

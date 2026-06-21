@@ -1,8 +1,7 @@
-from typing import NotRequired, TypedDict, cast
+from typing import Any, NotRequired, TypedDict, cast
 
-import httpx
-
-_MERGE = {"Prefer": "resolution=merge-duplicates"}
+from postgrest.types import CountMethod
+from supabase import Client
 
 
 class ActivityRow(TypedDict):
@@ -22,67 +21,55 @@ class ActivityRow(TypedDict):
     created_at: NotRequired[str]
 
 
-def upsert_activities(client: httpx.Client, rows: list[ActivityRow]) -> None:
+def upsert_activities(client: Client, rows: list[ActivityRow]) -> None:
     if not rows:
         return
-    response = client.post(
-        "/activities",
-        params={"on_conflict": "id"},
-        headers=_MERGE,
-        json=rows,
-    )
-    response.raise_for_status()
+    client.table("activities").upsert(
+        cast(list[dict[str, Any]], rows), on_conflict="id"
+    ).execute()
 
 
 def list_activities_since(
-    client: httpx.Client, athlete_id: int, since_iso: str
+    client: Client, athlete_id: int, since_iso: str
 ) -> list[ActivityRow]:
-    response = client.get(
-        "/activities",
-        params={
-            "athlete_id": f"eq.{athlete_id}",
-            "start_date": f"gte.{since_iso}",
-            "order": "start_date.asc",
-            "select": "*",
-        },
+    resp = (
+        client.table("activities")
+        .select("*")
+        .eq("athlete_id", athlete_id)
+        .gte("start_date", since_iso)
+        .order("start_date", desc=False)
+        .execute()
     )
-    response.raise_for_status()
-    return cast(list[ActivityRow], response.json())
+    return cast(list[ActivityRow], resp.data)
 
 
 def list_recent_activities(
-    client: httpx.Client, athlete_id: int, limit: int
+    client: Client, athlete_id: int, limit: int
 ) -> list[ActivityRow]:
-    response = client.get(
-        "/activities",
-        params={
-            "athlete_id": f"eq.{athlete_id}",
-            "order": "start_date.desc",
-            "limit": str(limit),
-            "select": "*",
-        },
+    resp = (
+        client.table("activities")
+        .select("*")
+        .eq("athlete_id", athlete_id)
+        .order("start_date", desc=True)
+        .limit(limit)
+        .execute()
     )
-    response.raise_for_status()
-    return cast(list[ActivityRow], response.json())
+    return cast(list[ActivityRow], resp.data)
 
 
-def _parse_total(response: httpx.Response) -> int:
-    total = response.headers.get("Content-Range", "").split("/")[-1]
-    return int(total) if total.isdigit() else 0
-
-
-def count_activities(client: httpx.Client, athlete_id: int) -> int:
-    response = client.get(
-        "/activities",
-        params={"athlete_id": f"eq.{athlete_id}", "select": "id"},
-        headers={"Prefer": "count=exact", "Range": "0-0"},
+def count_activities(client: Client, athlete_id: int) -> int:
+    resp = (
+        client.table("activities")
+        .select("id", count=CountMethod.exact)
+        .eq("athlete_id", athlete_id)
+        .limit(1)
+        .execute()
     )
-    response.raise_for_status()
-    return _parse_total(response)
+    return resp.count or 0
 
 
 def list_activities_filtered(
-    client: httpx.Client,
+    client: Client,
     athlete_id: int,
     *,
     q: str | None,
@@ -94,33 +81,41 @@ def list_activities_filtered(
     offset: int,
     limit: int,
 ) -> tuple[list[ActivityRow], int]:
-    params: dict[str, str] = {
-        "athlete_id": f"eq.{athlete_id}",
-        "created_at": f"lte.{as_of}",
-        "order": order,
-        "select": "*",
-    }
+    # `query: Any` sidesteps the differing builder subtypes returned by each
+    # chained filter (select -> filter -> ...), which mypy would otherwise reject
+    # on reassignment.
+    query: Any = (
+        client.table("activities")
+        .select("*", count=CountMethod.exact)
+        .eq("athlete_id", athlete_id)
+        .lte("created_at", as_of)
+    )
     if q:
-        params["name"] = f"ilike.*{q}*"
+        query = query.ilike("name", f"%{q}%")
     if min_dist is not None:
-        params["distance_m"] = f"gte.{min_dist}"
+        query = query.gte("distance_m", min_dist)
     if min_time is not None:
-        params["moving_time_s"] = f"gte.{min_time}"
+        query = query.gte("moving_time_s", min_time)
     if min_elev is not None:
-        params["elev_gain_m"] = f"gte.{min_elev}"
-    response = client.get(
-        "/activities",
-        params=params,
-        headers={"Prefer": "count=exact", "Range": f"{offset}-{offset + limit - 1}"},
-    )
-    response.raise_for_status()
-    return cast(list[ActivityRow], response.json()), _parse_total(response)
+        query = query.gte("elev_gain_m", min_elev)
+    # `order` is a PostgREST order string the service builds, e.g.
+    # "avg_speed_ms.desc.nullslast,id.desc"; replay each clause as an .order() call
+    # so the emitted query matches the previous behavior exactly.
+    for part in order.split(","):
+        column, _, rest = part.partition(".")
+        tokens = rest.split(".") if rest else []
+        desc = "desc" in tokens
+        nullsfirst: bool | None = None
+        if "nullslast" in tokens:
+            nullsfirst = False
+        elif "nullsfirst" in tokens:
+            nullsfirst = True
+        query = query.order(column, desc=desc, nullsfirst=nullsfirst)
+    resp = query.range(offset, offset + limit - 1).execute()
+    return cast(list[ActivityRow], resp.data), (resp.count or 0)
 
 
-def delete_activity(client: httpx.Client, athlete_id: int, activity_id: int) -> None:
-    response = client.request(
-        "DELETE",
-        "/activities",
-        params={"id": f"eq.{activity_id}", "athlete_id": f"eq.{athlete_id}"},
-    )
-    response.raise_for_status()
+def delete_activity(client: Client, athlete_id: int, activity_id: int) -> None:
+    client.table("activities").delete().eq("id", activity_id).eq(
+        "athlete_id", athlete_id
+    ).execute()

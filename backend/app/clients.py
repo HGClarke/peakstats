@@ -1,18 +1,21 @@
 import httpx
+from supabase import Client, ClientOptions, create_client
 
 from app.config import Settings
 from app.strava import StravaClient
 
 
-def build_supabase(settings: Settings) -> httpx.Client:
-    """A short-lived httpx client pre-configured for the Supabase REST API."""
-    headers = {
-        "apikey": settings.supabase_service_role_key,
-        "Authorization": f"Bearer {settings.supabase_service_role_key}",
-        "Content-Type": "application/json",
-    }
-    return httpx.Client(
-        base_url=f"{settings.supabase_url}/rest/v1", headers=headers, timeout=10
+def build_supabase(settings: Settings) -> Client:
+    """A Supabase client configured with the service-role key.
+
+    `create_client` performs no network I/O, so this is safe to call at startup.
+    The client wraps a synchronous httpx session (connection pooling + keep-alive);
+    share one instance for the app's lifetime (see app.main lifespan).
+    """
+    return create_client(
+        settings.supabase_url,
+        settings.supabase_service_role_key,
+        options=ClientOptions(postgrest_client_timeout=10),
     )
 
 

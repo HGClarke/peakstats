@@ -7,8 +7,7 @@ SETTINGS = Settings(strava_webhook_subscription_id=0)
 
 
 class FakeSupabase:
-    def close(self) -> None:
-        pass
+    pass
 
 
 class FakeStrava:
@@ -36,7 +35,6 @@ def _event(**overrides: object) -> StravaWebhookEvent:
 
 def _wire(monkeypatch, *, athlete=True):
     strava = FakeStrava()
-    monkeypatch.setattr(webhooks_service, "build_supabase", lambda settings: FakeSupabase())
     monkeypatch.setattr(webhooks_service, "build_strava", lambda settings: strava)
     monkeypatch.setattr(webhooks_service, "get_valid_access_token",
                         lambda supabase, strava, athlete_id: "AT")
@@ -54,7 +52,7 @@ def test_create_event_fetches_and_upserts(monkeypatch):
     monkeypatch.setattr(webhooks_service.sync_state_db, "upsert_sync_state",
                         lambda supabase, athlete_id, fields: states.append(fields))
 
-    webhooks_service.process_event(SETTINGS, _event(aspect_type="create"))
+    webhooks_service.process_event(FakeSupabase(), SETTINGS, _event(aspect_type="create"))
 
     assert strava.fetched == [555]
     assert upserts[0][0]["id"] == 555
@@ -71,7 +69,7 @@ def test_delete_event_removes_row_without_fetch(monkeypatch):
     monkeypatch.setattr(webhooks_service.sync_state_db, "upsert_sync_state",
                         lambda supabase, athlete_id, fields: None)
 
-    webhooks_service.process_event(SETTINGS, _event(aspect_type="delete"))
+    webhooks_service.process_event(FakeSupabase(), SETTINGS, _event(aspect_type="delete"))
 
     assert strava.fetched == []
     assert deleted == {"athlete_id": 7, "activity_id": 555}
@@ -84,28 +82,28 @@ def test_unknown_owner_is_ignored(monkeypatch):
         raise AssertionError("must not upsert for unknown owner")
 
     monkeypatch.setattr(webhooks_service.activities_db, "upsert_activities", fail_upsert)
-    webhooks_service.process_event(SETTINGS, _event())
+    webhooks_service.process_event(FakeSupabase(), SETTINGS, _event())
     assert strava.fetched == []
 
 
 def test_non_activity_event_builds_no_clients(monkeypatch):
     def fail(*a: object, **k: object) -> None:
-        raise AssertionError("must not build clients for non-activity events")
+        raise AssertionError("must not build a strava client for non-activity events")
 
-    monkeypatch.setattr(webhooks_service, "build_supabase", fail)
     monkeypatch.setattr(webhooks_service, "build_strava", fail)
-    webhooks_service.process_event(SETTINGS, _event(object_type="athlete", aspect_type="update"))
+    webhooks_service.process_event(
+        FakeSupabase(), SETTINGS, _event(object_type="athlete", aspect_type="update")
+    )
 
 
 def test_foreign_subscription_id_is_ignored(monkeypatch):
     def fail(*a: object, **k: object) -> None:
-        raise AssertionError("must not build clients for a foreign subscription id")
+        raise AssertionError("must not build a strava client for a foreign subscription id")
 
-    monkeypatch.setattr(webhooks_service, "build_supabase", fail)
     monkeypatch.setattr(webhooks_service, "build_strava", fail)
     settings = Settings(strava_webhook_subscription_id=999)
     # Event carries subscription_id=1, which does not match the configured 999.
-    webhooks_service.process_event(settings, _event(subscription_id=1))
+    webhooks_service.process_event(FakeSupabase(), settings, _event(subscription_id=1))
 
 
 def test_fetch_error_is_swallowed(monkeypatch):
@@ -124,4 +122,4 @@ def test_fetch_error_is_swallowed(monkeypatch):
 
     monkeypatch.setattr(webhooks_service.sync_state_db, "upsert_sync_state", fail_state)
     # Should not raise.
-    webhooks_service.process_event(SETTINGS, _event(aspect_type="update"))
+    webhooks_service.process_event(FakeSupabase(), SETTINGS, _event(aspect_type="update"))

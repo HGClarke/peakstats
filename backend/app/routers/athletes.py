@@ -1,5 +1,5 @@
-import httpx
 from fastapi import APIRouter, Depends, HTTPException, Response
+from supabase import Client
 
 from app.config import Settings, get_settings
 from app.cookies import clear_session_cookie
@@ -14,7 +14,7 @@ router = APIRouter()
 @router.get("", response_model=AthleteResponse)
 def get_athlete(
     athlete_id: int = Depends(get_current_athlete_id),
-    supabase: httpx.Client = Depends(get_supabase),
+    supabase: Client = Depends(get_supabase),
 ) -> AthleteResponse:
     """Return the authenticated athlete's profile; 404 if the record is missing."""
     profile = athletes_service.get_profile(supabase, athlete_id)
@@ -26,7 +26,7 @@ def get_athlete(
 @router.delete("/connection", status_code=204)
 def disconnect(
     athlete_id: int = Depends(get_current_athlete_id),
-    supabase: httpx.Client = Depends(get_supabase),
+    supabase: Client = Depends(get_supabase),
     strava: StravaClient = Depends(get_strava),
     settings: Settings = Depends(get_settings),
 ) -> Response:
