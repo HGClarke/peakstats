@@ -91,5 +91,5 @@ def run_backfill(settings: Settings, athlete_id: int) -> None:
         logger.exception("Backfill failed for athlete %s", athlete_id)
         sync_state_db.upsert_sync_state(supabase, athlete_id, {"status": "error"})
     finally:
-        getattr(supabase, "close", lambda: None)()
+        supabase.close()
         strava.close()

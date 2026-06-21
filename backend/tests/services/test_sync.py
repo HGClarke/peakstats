@@ -2,6 +2,11 @@ from app.models.sync import SyncStatusResponse
 from app.services import sync as sync_service
 
 
+class FakeSupabase:
+    def close(self) -> None:
+        pass
+
+
 def test_to_activity_row_maps_summary_fields():
     summary = {
         "id": 555, "name": "River loop", "sport_type": "Ride",
@@ -106,7 +111,7 @@ def test_run_backfill_paginates_and_finalizes(monkeypatch):
         def close(self):
             pass
 
-    monkeypatch.setattr(sync_service, "build_supabase", lambda settings: object())
+    monkeypatch.setattr(sync_service, "build_supabase", lambda settings: FakeSupabase())
     monkeypatch.setattr(sync_service, "build_strava", lambda settings: FakeStrava())
     monkeypatch.setattr(sync_service, "get_valid_access_token",
                         lambda supabase, strava, athlete_id: "AT")
@@ -125,7 +130,7 @@ def test_run_backfill_paginates_and_finalizes(monkeypatch):
 
 def test_run_backfill_sets_error_on_failure(monkeypatch):
     states = []
-    monkeypatch.setattr(sync_service, "build_supabase", lambda settings: object())
+    monkeypatch.setattr(sync_service, "build_supabase", lambda settings: FakeSupabase())
 
     class BoomStrava:
         def close(self):
