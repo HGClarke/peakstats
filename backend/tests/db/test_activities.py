@@ -136,3 +136,17 @@ def test_list_activities_filtered_omits_empty_filters():
     assert "elev_gain_m" not in p
     assert total == 0
     assert rows == []
+
+
+def test_delete_activity_scopes_by_athlete_and_id():
+    seen = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["method"] = request.method
+        seen["params"] = dict(request.url.params)
+        return httpx.Response(204)
+
+    activities.delete_activity(_client(handler), athlete_id=7, activity_id=123)
+    assert seen["method"] == "DELETE"
+    assert seen["params"]["id"] == "eq.123"
+    assert seen["params"]["athlete_id"] == "eq.7"

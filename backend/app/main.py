@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
-from app.routers import activities, athletes, auth, health, sync
+from app.routers import activities, athletes, auth, health, sync, webhooks
 
 
 def create_app() -> FastAPI:
@@ -21,6 +21,7 @@ def create_app() -> FastAPI:
     app.include_router(athletes.router, prefix="/athlete")
     app.include_router(activities.router, prefix="/activities")
     app.include_router(sync.router, prefix="/sync")
+    app.include_router(webhooks.router, prefix="/webhooks")
     return app
 
 

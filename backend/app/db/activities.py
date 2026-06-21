@@ -114,3 +114,12 @@ def list_activities_filtered(
     )
     response.raise_for_status()
     return cast(list[ActivityRow], response.json()), _parse_total(response)
+
+
+def delete_activity(client: httpx.Client, athlete_id: int, activity_id: int) -> None:
+    response = client.request(
+        "DELETE",
+        "/activities",
+        params={"id": f"eq.{activity_id}", "athlete_id": f"eq.{athlete_id}"},
+    )
+    response.raise_for_status()

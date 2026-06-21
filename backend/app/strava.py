@@ -8,6 +8,7 @@ AUTHORIZE_URL = "https://www.strava.com/oauth/authorize"
 TOKEN_URL = "https://www.strava.com/oauth/token"
 DEAUTHORIZE_URL = "https://www.strava.com/oauth/deauthorize"
 API_BASE_URL = "https://www.strava.com/api/v3"
+PUSH_SUBSCRIPTIONS_URL = f"{API_BASE_URL}/push_subscriptions"
 SCOPE = "read,activity:read_all"
 
 
@@ -100,6 +101,47 @@ class StravaClient:
         )
         response.raise_for_status()
         return response.json()
+
+    def get_activity(self, access_token: str, activity_id: int) -> dict:
+        """Fetch a single detailed activity by id; raises on HTTP error."""
+        response = self._http.get(
+            f"{API_BASE_URL}/activities/{activity_id}",
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
+        response.raise_for_status()
+        return response.json()
+
+    def create_push_subscription(self, callback_url: str, verify_token: str) -> int:
+        """Create the app-level Strava push subscription; returns its id."""
+        response = self._http.post(
+            PUSH_SUBSCRIPTIONS_URL,
+            data={
+                "client_id": self._client_id,
+                "client_secret": self._client_secret,
+                "callback_url": callback_url,
+                "verify_token": verify_token,
+            },
+        )
+        response.raise_for_status()
+        return int(response.json()["id"])
+
+    def list_push_subscriptions(self) -> list[dict]:
+        """List the app's current push subscriptions."""
+        response = self._http.get(
+            PUSH_SUBSCRIPTIONS_URL,
+            params={"client_id": self._client_id, "client_secret": self._client_secret},
+        )
+        response.raise_for_status()
+        return response.json()
+
+    def delete_push_subscription(self, subscription_id: int) -> None:
+        """Delete the app's push subscription by id; raises on HTTP error."""
+        response = self._http.request(
+            "DELETE",
+            f"{PUSH_SUBSCRIPTIONS_URL}/{subscription_id}",
+            params={"client_id": self._client_id, "client_secret": self._client_secret},
+        )
+        response.raise_for_status()
 
     def close(self) -> None:
         self._http.close()
