@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     strava_client_id: str = ""
     strava_client_secret: str = ""
     strava_webhook_verify_token: str = ""
+    strava_webhook_subscription_id: int = 0
     session_secret: str = ""
     session_cookie_secure: bool = False
     session_cookie_samesite: Literal["lax", "strict", "none"] = "lax"
