@@ -1,9 +1,9 @@
 import httpx
-from fastapi import APIRouter, BackgroundTasks, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 
 from app.config import Settings, get_settings
 from app.deps import get_current_athlete_id, get_supabase
-from app.models.sync import SyncStatusResponse
+from app.models.sync import RefreshResponse, SyncStatusResponse
 from app.services import sync as sync_service
 
 router = APIRouter()
@@ -28,3 +28,14 @@ def start(
     if started:
         background_tasks.add_task(sync_service.run_backfill, settings, athlete_id)
     return result
+
+
+@router.post("/refresh", response_model=RefreshResponse)
+def refresh(
+    athlete_id: int = Depends(get_current_athlete_id),
+    settings: Settings = Depends(get_settings),
+) -> RefreshResponse:
+    try:
+        return sync_service.refresh(settings, athlete_id)
+    except Exception as exc:  # noqa: BLE001 - surface upstream failures as 502
+        raise HTTPException(status_code=502, detail="Refresh from Strava failed") from exc

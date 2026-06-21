@@ -7,7 +7,7 @@ from app.clients import build_strava, build_supabase
 from app.config import Settings
 from app.db import activities as activities_db
 from app.db import sync_state as sync_state_db
-from app.models.sync import SyncStatusResponse
+from app.models.sync import RefreshResponse, SyncStatusResponse
 from app.services.tokens import get_valid_access_token
 
 logger = logging.getLogger(__name__)
@@ -90,6 +90,39 @@ def run_backfill(settings: Settings, athlete_id: int) -> None:
     except Exception:
         logger.exception("Backfill failed for athlete %s", athlete_id)
         sync_state_db.upsert_sync_state(supabase, athlete_id, {"status": "error"})
+    finally:
+        supabase.close()
+        strava.close()
+
+
+def refresh(settings: Settings, athlete_id: int) -> RefreshResponse:
+    supabase = build_supabase(settings)
+    strava = build_strava(settings)
+    try:
+        access_token = get_valid_access_token(supabase, strava, athlete_id)
+        row = sync_state_db.get_sync_state(supabase, athlete_id)
+        after: int | None = None
+        if row is not None and row["last_sync_at"] is not None:
+            after = int(datetime.fromisoformat(row["last_sync_at"]).timestamp())
+        count = 0
+        page = 1
+        while True:
+            summaries = strava.list_activities(
+                access_token, page=page, per_page=PER_PAGE, after=after
+            )
+            if not summaries:
+                break
+            rows = [_to_activity_row(athlete_id, s) for s in summaries]
+            activities_db.upsert_activities(supabase, rows)  # type: ignore[arg-type]
+            count += len(summaries)
+            if len(summaries) < PER_PAGE:
+                break
+            page += 1
+        now = datetime.now(UTC).isoformat()
+        sync_state_db.upsert_sync_state(
+            supabase, athlete_id, {"status": "idle", "last_sync_at": now}
+        )
+        return RefreshResponse(synced=count)
     finally:
         supabase.close()
         strava.close()

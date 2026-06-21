@@ -7,3 +7,7 @@ class SyncStatusResponse(BaseModel):
     synced: int
     last_backfill_at: str | None = None
     last_sync_at: str | None = None
+
+
+class RefreshResponse(BaseModel):
+    synced: int

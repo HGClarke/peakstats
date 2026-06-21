@@ -1,4 +1,4 @@
-from app.models.sync import SyncStatusResponse
+from app.models.sync import RefreshResponse, SyncStatusResponse
 from app.services import sync as sync_service
 from app.session import SESSION_COOKIE, sign_session
 
@@ -46,3 +46,16 @@ def test_start_does_not_reschedule_when_already_running(client, monkeypatch):
     monkeypatch.setattr(sync_service, "run_backfill", fail)
     _auth(client)
     assert client.post("/sync/start").status_code == 200
+
+
+def test_refresh_returns_count(client, monkeypatch):
+    monkeypatch.setattr(sync_service, "refresh",
+                        lambda settings, athlete_id: RefreshResponse(synced=4))
+    _auth(client)
+    response = client.post("/sync/refresh")
+    assert response.status_code == 200
+    assert response.json() == {"synced": 4}
+
+
+def test_refresh_requires_session(client):
+    assert client.post("/sync/refresh").status_code == 401

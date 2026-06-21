@@ -147,3 +147,37 @@ def test_run_backfill_sets_error_on_failure(monkeypatch):
 
     sync_service.run_backfill(settings=object(), athlete_id=7)
     assert states[-1] == {"status": "error"}
+
+
+def test_refresh_pulls_since_last_sync(monkeypatch):
+    captured = {}
+
+    class FakeStrava:
+        def list_activities(self, access_token, *, page, per_page=200, after=None):
+            captured["after"] = after
+            return [] if page > 1 else [{"id": 1, "name": "R", "type": "Ride",
+                                         "start_date": "2026-06-20T08:00:00Z", "distance": 1.0,
+                                         "moving_time": 1, "elapsed_time": 1,
+                                         "total_elevation_gain": 0.0}]
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(sync_service, "build_supabase", lambda settings: FakeSupabase())
+    monkeypatch.setattr(sync_service, "build_strava", lambda settings: FakeStrava())
+    monkeypatch.setattr(sync_service, "get_valid_access_token",
+                        lambda supabase, strava, athlete_id: "AT")
+    _state = {"status": "idle", "progress": 100,
+              "last_backfill_at": "2026-06-01T00:00:00+00:00",
+              "last_sync_at": "2026-06-19T00:00:00+00:00",
+              "last_webhook_event_id": None}
+    monkeypatch.setattr(sync_service.sync_state_db, "get_sync_state",
+                        lambda supabase, athlete_id: _state)
+    monkeypatch.setattr(sync_service.activities_db, "upsert_activities",
+                        lambda supabase, rows: None)
+    monkeypatch.setattr(sync_service.sync_state_db, "upsert_sync_state",
+                        lambda supabase, athlete_id, fields: None)
+
+    result = sync_service.refresh(settings=object(), athlete_id=7)
+    assert result.synced == 1
+    assert captured["after"] is not None
