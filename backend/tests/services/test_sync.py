@@ -151,6 +151,7 @@ def test_run_backfill_sets_error_on_failure(monkeypatch):
 
 def test_refresh_pulls_since_last_sync(monkeypatch):
     captured = {}
+    final_fields = {}
 
     class FakeStrava:
         def list_activities(self, access_token, *, page, per_page=200, after=None):
@@ -176,8 +177,10 @@ def test_refresh_pulls_since_last_sync(monkeypatch):
     monkeypatch.setattr(sync_service.activities_db, "upsert_activities",
                         lambda supabase, rows: None)
     monkeypatch.setattr(sync_service.sync_state_db, "upsert_sync_state",
-                        lambda supabase, athlete_id, fields: None)
+                        lambda supabase, athlete_id, fields: final_fields.update(fields))
 
     result = sync_service.refresh(settings=object(), athlete_id=7)
     assert result.synced == 1
     assert captured["after"] is not None
+    assert "status" not in final_fields
+    assert final_fields["last_sync_at"]

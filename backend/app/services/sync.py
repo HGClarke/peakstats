@@ -120,7 +120,7 @@ def refresh(settings: Settings, athlete_id: int) -> RefreshResponse:
             page += 1
         now = datetime.now(UTC).isoformat()
         sync_state_db.upsert_sync_state(
-            supabase, athlete_id, {"status": "idle", "last_sync_at": now}
+            supabase, athlete_id, {"last_sync_at": now}
         )
         return RefreshResponse(synced=count)
     finally:
