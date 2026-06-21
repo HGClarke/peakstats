@@ -1,4 +1,4 @@
-from typing import TypedDict
+from typing import TypedDict, cast
 
 import httpx
 
@@ -30,6 +30,38 @@ def upsert_activities(client: httpx.Client, rows: list[ActivityRow]) -> None:
         json=rows,
     )
     response.raise_for_status()
+
+
+def list_activities_since(
+    client: httpx.Client, athlete_id: int, since_iso: str
+) -> list[ActivityRow]:
+    response = client.get(
+        "/activities",
+        params={
+            "athlete_id": f"eq.{athlete_id}",
+            "start_date": f"gte.{since_iso}",
+            "order": "start_date.asc",
+            "select": "*",
+        },
+    )
+    response.raise_for_status()
+    return cast(list[ActivityRow], response.json())
+
+
+def list_recent_activities(
+    client: httpx.Client, athlete_id: int, limit: int
+) -> list[ActivityRow]:
+    response = client.get(
+        "/activities",
+        params={
+            "athlete_id": f"eq.{athlete_id}",
+            "order": "start_date.desc",
+            "limit": str(limit),
+            "select": "*",
+        },
+    )
+    response.raise_for_status()
+    return cast(list[ActivityRow], response.json())
 
 
 def count_activities(client: httpx.Client, athlete_id: int) -> int:
