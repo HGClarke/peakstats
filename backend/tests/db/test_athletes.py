@@ -1,7 +1,6 @@
 import json
 
 import httpx
-
 from app.db import athletes
 
 

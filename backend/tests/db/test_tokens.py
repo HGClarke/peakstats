@@ -1,8 +1,7 @@
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import httpx
-
 from app.db import tokens
 
 
@@ -24,7 +23,7 @@ def test_upsert_tokens_serializes_expiry_iso():
         return httpx.Response(201, json=[])
 
     tokens.upsert_tokens(_client(handler), 7, "AT", "RT",
-                         datetime(2024, 1, 1, tzinfo=timezone.utc))
+                         datetime(2024, 1, 1, tzinfo=UTC))
     assert seen["url"] == "https://proj.supabase.co/rest/v1/strava_tokens?on_conflict=athlete_id"
     body = json.loads(seen["body"])
     assert body[0]["access_token"] == "AT"

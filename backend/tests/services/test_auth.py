@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.services import auth
 from app.strava import StravaToken
@@ -6,7 +6,7 @@ from app.strava import StravaToken
 
 class FakeStrava:
     def __init__(self) -> None:
-        self.token = StravaToken("AT", "RT", datetime(2099, 1, 1, tzinfo=timezone.utc),
+        self.token = StravaToken("AT", "RT", datetime(2099, 1, 1, tzinfo=UTC),
                                  {"id": 99, "firstname": "Ada", "lastname": "Lovelace",
                                   "profile": "http://img/a.png"})
 

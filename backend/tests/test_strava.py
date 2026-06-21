@@ -1,7 +1,6 @@
-from datetime import timezone
+from datetime import UTC
 
 import httpx
-
 from app.strava import StravaClient
 
 
@@ -40,7 +39,7 @@ def test_exchange_code_parses_token_and_athlete():
     token = _client(handler).exchange_code("abc")
     assert token.access_token == "AT"
     assert token.refresh_token == "RT"
-    assert token.expires_at.tzinfo == timezone.utc
+    assert token.expires_at.tzinfo == UTC
     assert int(token.expires_at.timestamp()) == 1_700_000_000
     assert token.athlete["id"] == 99
 

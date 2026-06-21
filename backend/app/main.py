@@ -6,6 +6,7 @@ from app.routers import athletes, auth, health
 
 
 def create_app() -> FastAPI:
+    """Build and return the configured FastAPI application instance."""
     settings = get_settings()
     app = FastAPI(title="Peakstats API")
     app.add_middleware(
