@@ -106,8 +106,15 @@ describe("ActivitiesPage", () => {
 
   it("captures the snapshot from the first response and reuses it", async () => {
     renderPage();
+    await waitFor(() => expect(useActivities.mock.calls[0][0]).toMatchObject({ asOf: null }));
     await waitFor(() =>
       expect(lastQuery()).toMatchObject({ asOf: "2026-06-21T12:00:00Z" }));
+  });
+
+  it("redirects to landing when unauthenticated", async () => {
+    useAthlete.mockReturnValue({ data: null, isLoading: false, error: new Error("401") });
+    renderPage();
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/", { replace: true }));
   });
 
   it("redirects to /sync when never synced", async () => {
@@ -116,5 +123,14 @@ describe("ActivitiesPage", () => {
     renderPage();
     await waitFor(() =>
       expect(mockNavigate).toHaveBeenCalledWith("/sync", { replace: true }));
+  });
+
+  it("resets to page 1 when the sort changes", () => {
+    useActivities.mockReturnValue({ data: dto({ total: 20, total_pages: 3 }), isLoading: false });
+    renderPage();
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    expect(lastQuery()).toMatchObject({ page: 2 });
+    fireEvent.click(screen.getByRole("button", { name: /distance/i }));
+    expect(lastQuery()).toMatchObject({ sort: "distance", page: 1 });
   });
 });
