@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { OverviewDTO } from "@/types/overview";
-import { toOverview, overviewQueryOptions, OVERVIEW_REFETCH_INTERVAL_MS } from "./overview";
+import { toOverview, fetchOverview, overviewQueryOptions, OVERVIEW_REFETCH_INTERVAL_MS } from "./overview";
 
 const DTO: OverviewDTO = {
   this_week: {
@@ -30,6 +30,7 @@ const DTO: OverviewDTO = {
       name: "River loop",
       type: "Ride",
       start_date: "2026-06-16T07:42:00Z",
+      start_date_local: "2026-06-16T07:42:00Z",
       distance_m: 38700,
       moving_time_s: 5662,
     },
@@ -78,6 +79,42 @@ describe("toOverview", () => {
       durLabel: "1h 34m",
     });
   });
+
+  it("labels a recent ride by its local day, not UTC", () => {
+    const dto = {
+      ...DTO,
+      recent_rides: [
+        {
+          id: 2,
+          name: "Late ride",
+          type: "Ride",
+          start_date: "2026-06-21T06:00:00Z", // Sun UTC
+          start_date_local: "2026-06-20T23:00:00Z", // Sat local
+          distance_m: 12000,
+          moving_time_s: 1200,
+        },
+      ],
+    };
+    expect(toOverview(dto).recentRides[0].meta).toBe("Sat · Jun 20 · Ride");
+  });
+
+  it("falls back to start_date when start_date_local is null", () => {
+    const dto = {
+      ...DTO,
+      recent_rides: [
+        {
+          id: 3,
+          name: "Legacy",
+          type: "Ride",
+          start_date: "2026-06-16T07:42:00Z",
+          start_date_local: null,
+          distance_m: 1000,
+          moving_time_s: 100,
+        },
+      ],
+    };
+    expect(toOverview(dto).recentRides[0].meta).toBe("Tue · Jun 16 · Ride");
+  });
 });
 
 describe("overviewQueryOptions", () => {
@@ -86,5 +123,21 @@ describe("overviewQueryOptions", () => {
     expect(opts.refetchOnWindowFocus).toBe(true);
     expect(opts.refetchInterval).toBe(OVERVIEW_REFETCH_INTERVAL_MS);
     expect(OVERVIEW_REFETCH_INTERVAL_MS).toBe(60_000);
+  });
+});
+
+describe("fetchOverview", () => {
+  it("requests the overview with the browser timezone", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(DTO), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    await fetchOverview();
+    const url = fetchMock.mock.calls[0][0] as string;
+    expect(url).toContain("/activities/overview?tz=");
+    vi.unstubAllGlobals();
   });
 });
