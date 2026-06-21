@@ -1,4 +1,5 @@
 import { createBrowserRouter, type RouteObject } from "react-router";
+import AppHome from "@/pages/app-home/AppHome";
 import LandingPage from "@/pages/landing/LandingPage";
 import NotFoundPage from "@/pages/not-found/NotFoundPage";
 
@@ -8,6 +9,7 @@ import NotFoundPage from "@/pages/not-found/NotFoundPage";
  */
 export const routes: RouteObject[] = [
   { path: "/", element: <LandingPage /> },
+  { path: "/app", element: <AppHome /> },
   { path: "*", element: <NotFoundPage /> },
 ];
 
