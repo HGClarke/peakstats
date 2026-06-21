@@ -7,28 +7,12 @@ import type {
   RecentRideDTO,
 } from "@/types/overview";
 import { apiFetch } from "./client";
-
-const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const MONTHS = [
-  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-];
-
-function fmtDuration(seconds: number): string {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  return h > 0 ? `${h}h ${m < 10 ? "0" : ""}${m}m` : `${m}m`;
-}
+import { fmtDate, fmtDuration } from "@/lib/format";
 
 function delta(current: number, previous: number): Pick<Kpi, "delta" | "deltaPositive"> {
   if (previous <= 0) return { delta: "—", deltaPositive: true };
   const pct = Math.round(((current - previous) / previous) * 100);
   return { delta: `${pct >= 0 ? "+" : ""}${pct}%`, deltaPositive: pct >= 0 };
-}
-
-function fmtDate(iso: string): string {
-  const d = new Date(iso);
-  return `${WEEKDAYS[d.getUTCDay()]} · ${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}`;
 }
 
 function toRide(r: RecentRideDTO): DashRide {
