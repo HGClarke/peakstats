@@ -13,6 +13,7 @@ def test_get_detail_maps_header_and_power_stats(monkeypatch):
     monkeypatch.setattr(svc, "ensure_streams",
         lambda c, s, a, aid: {"time": [0, 1, 2], "watts": [200, 200, 200]})
     monkeypatch.setattr(svc.athletes_db, "get_athlete", lambda c, aid: {"settings": {}})
+    monkeypatch.setattr(svc.activities_db, "list_activity_climbs", lambda c, a, aid: [])
     d = svc.get_detail(object(), object(), 7, 5)
     assert d.name == "Saturday Gravel Loop" and d.distance_m == 84300.0
     assert d.avg_hr == 148 and d.summary_polyline == "abc"
@@ -24,6 +25,7 @@ def test_get_detail_nulls_power_without_watts(monkeypatch):
     monkeypatch.setattr(svc.activities_db, "get_activity", lambda c, a, aid: dict(ROW))
     monkeypatch.setattr(svc, "ensure_streams", lambda c, s, a, aid: {"time": [0, 1]})
     monkeypatch.setattr(svc.athletes_db, "get_athlete", lambda c, aid: {"settings": {}})
+    monkeypatch.setattr(svc.activities_db, "list_activity_climbs", lambda c, a, aid: [])
     d = svc.get_detail(object(), object(), 7, 5)
     assert d.avg_power_w is None and d.normalized_power_w is None and d.work_kj is None
 
@@ -44,6 +46,7 @@ def test_get_detail_builds_zones_from_settings(monkeypatch):
     monkeypatch.setattr(svc.athletes_db, "get_athlete",
         lambda c, aid: {"id": 7, "name": "A", "avatar_url": None,
                         "settings": {"ftp_w": 280, "hr_max": 190}})
+    monkeypatch.setattr(svc.activities_db, "list_activity_climbs", lambda c, a, aid: [])
     d = svc.get_detail(object(), object(), 7, 5)
     assert d.power_zones.unset is False
     assert round(sum(b.pct for b in d.power_zones.buckets)) == 100
@@ -56,5 +59,18 @@ def test_get_detail_zones_unset_without_settings(monkeypatch):
         lambda c, s, a, aid: {"time": [0, 1], "watts": [200, 210]})
     monkeypatch.setattr(svc.athletes_db, "get_athlete",
         lambda c, aid: {"id": 7, "name": "A", "avatar_url": None, "settings": {}})
+    monkeypatch.setattr(svc.activities_db, "list_activity_climbs", lambda c, a, aid: [])
     d = svc.get_detail(object(), object(), 7, 5)
     assert d.power_zones.unset is True and d.hr_zones.unset is True
+
+
+def test_get_detail_includes_climbs(monkeypatch):
+    monkeypatch.setattr(svc.activities_db, "get_activity", lambda c, a, aid: dict(ROW))
+    monkeypatch.setattr(svc, "ensure_streams",
+        lambda c, s, a, aid: {"time": [0, 1], "watts": [200, 200]})
+    monkeypatch.setattr(svc.athletes_db, "get_athlete", lambda c, aid: {"settings": {}})
+    monkeypatch.setattr(svc.activities_db, "list_activity_climbs", lambda c, a, aid: [
+        {"elapsed_time_s": 1089, "segments": {"name": "Marincello", "climb_category": 2,
+         "distance_m": 4300.0, "avg_grade": 7.2, "elev_gain_m": 310.0}}])
+    d = svc.get_detail(object(), object(), 7, 5)
+    assert d.climbs[0].name == "Marincello" and d.climbs[0].vam > 0

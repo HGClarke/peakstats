@@ -150,3 +150,17 @@ def mark_detail_fetched(
     client.table("activities").update(
         {"splits_metric": splits_metric, "detail_fetched_at": fetched_at}
     ).eq("id", activity_id).execute()
+
+
+def list_activity_climbs(client: Client, athlete_id: int, activity_id: int) -> list[dict]:
+    """Return segment_efforts with embedded segment data for categorized climbs."""
+    select_cols = (
+        "elapsed_time_s, segments(name, climb_category, distance_m, avg_grade, elev_gain_m)"
+    )
+    resp = (
+        client.table("segment_efforts")
+        .select(select_cols)
+        .eq("athlete_id", athlete_id).eq("activity_id", activity_id)
+        .execute()
+    )
+    return cast(list[dict], resp.data)

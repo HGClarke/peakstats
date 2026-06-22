@@ -13,6 +13,7 @@ from app.models.activities import (
     ActivityListItem,
     ActivityListResponse,
     ActivityStreamsResponse,
+    ClimbItem,
     OverviewResponse,
     RecentRideItem,
     SortDir,
@@ -255,6 +256,19 @@ def get_detail(
         _zones_block(time, hr, analysis.hr_zones(hr_max), hr_max)
         if hr_max else ZonesBlock(unset=True)
     )
+    climb_rows = [
+        {"name": r["segments"]["name"], "climb_category": r["segments"]["climb_category"],
+         "distance_m": r["segments"]["distance_m"], "avg_grade": r["segments"]["avg_grade"],
+         "elev_gain_m": r["segments"]["elev_gain_m"], "elapsed_time_s": r["elapsed_time_s"]}
+        for r in activities_db.list_activity_climbs(supabase, athlete_id, activity_id)
+        if r.get("segments")
+    ]
+    climbs = [
+        ClimbItem(name=c["name"], climb_category=c["climb_category"], distance_m=c["distance_m"],
+                  avg_grade=c["avg_grade"], elev_gain_m=c["elev_gain_m"],
+                  time_s=c["elapsed_time_s"], vam=c["vam"])
+        for c in analysis.compute_climbs(climb_rows)
+    ]
     return ActivityDetailResponse(
         id=row["id"], name=row["name"], type=row["type"],
         start_date=row["start_date"], start_date_local=row.get("start_date_local"),
@@ -268,4 +282,5 @@ def get_detail(
         summary_polyline=row.get("summary_polyline"),
         power_zones=power_block,
         hr_zones=hr_block,
+        climbs=climbs,
     )

@@ -80,6 +80,16 @@ class ZonesBlock(BaseModel):
     buckets: list[ZoneBucket] = []
 
 
+class ClimbItem(BaseModel):
+    name: str
+    climb_category: int
+    distance_m: float
+    avg_grade: float
+    elev_gain_m: float
+    time_s: int
+    vam: int
+
+
 class ActivityDetailResponse(BaseModel):
     id: int
     name: str
@@ -98,3 +108,4 @@ class ActivityDetailResponse(BaseModel):
     summary_polyline: str | None = None
     power_zones: ZonesBlock = ZonesBlock(unset=True)
     hr_zones: ZonesBlock = ZonesBlock(unset=True)
+    climbs: list[ClimbItem] = []

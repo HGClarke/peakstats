@@ -98,6 +98,17 @@ def hr_zones(hr_max: int) -> list[dict]:
     return out
 
 
+def compute_climbs(rows: list[dict]) -> list[dict]:
+    """Add VAM (metres/hour) to each climb row and sort by category then time, desc."""
+    out = []
+    for r in rows:
+        secs = r["elapsed_time_s"]
+        vam = round(r["elev_gain_m"] / (secs / 3600)) if secs else 0
+        out.append({**r, "vam": vam})
+    out.sort(key=lambda c: (c["climb_category"], c["elapsed_time_s"]), reverse=True)
+    return out
+
+
 def time_in_zones(time: list[int], series: list, zones: list[dict]) -> list[dict]:
     """Δt-weighted seconds and percentage spent in each zone bucket."""
     dt = deltas(time)

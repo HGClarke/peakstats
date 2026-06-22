@@ -61,3 +61,15 @@ def test_time_in_zones_dt_weighted_sums_to_total():
     assert by_z["Z2"]["seconds"] == 2
     assert by_z["Z7"]["seconds"] == 1
     assert round(sum(b["pct"] for b in buckets)) == 100
+
+
+def test_compute_climbs_vam_and_sort():
+    rows = [
+        {"name": "Hawk Hill", "climb_category": 3, "distance_m": 1800, "avg_grade": 6.4,
+         "elev_gain_m": 115, "elapsed_time_s": 421},
+        {"name": "Marincello", "climb_category": 2, "distance_m": 4300, "avg_grade": 7.2,
+         "elev_gain_m": 310, "elapsed_time_s": 1089},
+    ]
+    out = analysis.compute_climbs(rows)
+    assert out[0]["name"] == "Hawk Hill"  # cat 3 before cat 2
+    assert out[1]["vam"] == round(310 / (1089 / 3600))  # ≈ 1025
