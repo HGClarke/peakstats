@@ -39,7 +39,7 @@ const DTO: OverviewDTO = {
 
 describe("toOverview", () => {
   it("formats the four KPI cards with deltas", () => {
-    const { kpis } = toOverview(DTO);
+    const { kpis } = toOverview(DTO, "metric");
     expect(kpis.map((k) => k.label)).toEqual([
       "DISTANCE",
       "MOVING TIME",
@@ -54,7 +54,7 @@ describe("toOverview", () => {
 
   it("marks a decline as not positive", () => {
     const dto = { ...DTO, this_week: { ...DTO.this_week, distance_m: 20000 } };
-    expect(toOverview(dto).kpis[0]).toMatchObject({ delta: "-20%", deltaPositive: false });
+    expect(toOverview(dto, "metric").kpis[0]).toMatchObject({ delta: "-20%", deltaPositive: false });
   });
 
   it("shows an em dash when there is no prior week to compare", () => {
@@ -62,15 +62,15 @@ describe("toOverview", () => {
       ...DTO,
       last_week: { distance_m: 0, elev_gain_m: 0, moving_time_s: 0, avg_speed_ms: null },
     };
-    expect(toOverview(dto).kpis[0].delta).toBe("—");
+    expect(toOverview(dto, "metric").kpis[0].delta).toBe("—");
   });
 
   it("passes the weekly chart points through", () => {
-    expect(toOverview(DTO).week).toEqual(DTO.week);
+    expect(toOverview(DTO, "metric").week).toEqual(DTO.week);
   });
 
   it("formats recent rides for display", () => {
-    const ride = toOverview(DTO).recentRides[0];
+    const ride = toOverview(DTO, "metric").recentRides[0];
     expect(ride).toEqual({
       id: 1,
       name: "River loop",
@@ -95,7 +95,7 @@ describe("toOverview", () => {
         },
       ],
     };
-    expect(toOverview(dto).recentRides[0].meta).toBe("Sat · Jun 20 · Ride");
+    expect(toOverview(dto, "metric").recentRides[0].meta).toBe("Sat · Jun 20 · Ride");
   });
 
   it("falls back to start_date when start_date_local is null", () => {
@@ -113,7 +113,14 @@ describe("toOverview", () => {
         },
       ],
     };
-    expect(toOverview(dto).recentRides[0].meta).toBe("Tue · Jun 16 · Ride");
+    expect(toOverview(dto, "metric").recentRides[0].meta).toBe("Tue · Jun 16 · Ride");
+  });
+
+  it("renders imperial units", () => {
+    const o = toOverview(DTO, "imperial");
+    expect(o.kpis[0].unit).toBe("mi");
+    expect(o.kpis[3].unit).toBe("mph");
+    expect(o.recentRides[0].distLabel).toMatch(/ mi$/);
   });
 });
 
