@@ -1,14 +1,14 @@
 import { RouterProvider } from "react-router/dom";
 import { QueryProvider } from "@/app/providers/QueryProvider";
-import { ThemeProvider } from "@/app/providers/ThemeProvider";
+import { SettingsProvider } from "@/app/providers/SettingsProvider";
 import { router } from "@/app/router";
 
 export default function App() {
   return (
     <QueryProvider>
-      <ThemeProvider>
+      <SettingsProvider>
         <RouterProvider router={router} />
-      </ThemeProvider>
+      </SettingsProvider>
     </QueryProvider>
   );
 }

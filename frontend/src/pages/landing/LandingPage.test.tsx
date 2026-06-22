@@ -1,14 +1,10 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { screen, fireEvent } from "@testing-library/react";
 import { stravaLoginUrl } from "@/api/auth";
-import { ThemeProvider } from "@/app/providers/ThemeProvider";
+import { renderWithProviders } from "@/test/providers";
 import LandingPage from "./LandingPage";
 
 function renderLandingPage() {
-  return render(
-    <ThemeProvider>
-      <LandingPage />
-    </ThemeProvider>
-  );
+  return renderWithProviders(<LandingPage />);
 }
 
 beforeEach(() => {

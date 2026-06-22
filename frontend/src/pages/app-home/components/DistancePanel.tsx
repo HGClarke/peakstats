@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { useTheme } from "@/app/providers/theme-context";
+import { useSettings } from "@/app/providers/settings-context";
 import type { WeekPoint } from "@/types/ride";
 
 const WeekChart = lazy(() => import("@/components/WeekChart"));
@@ -10,7 +10,7 @@ function ChartSkeleton() {
 
 /** "Distance over time" card showing the current week's daily distances. */
 export function DistancePanel({ week }: { week: WeekPoint[] }) {
-  const { isDark } = useTheme();
+  const { isDark } = useSettings();
   return (
     <div className="bg-surface-card border border-line rounded-2xl p-5 mb-[18px] transition-colors duration-300">
       <div className="flex items-center justify-between mb-[10px]">

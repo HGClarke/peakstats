@@ -68,10 +68,10 @@ appears. Don't pre-emptively "generalize".
   inline `<svg>`. Brand marks (the `Logo` glyph, the Strava CTA mark) stay custom
   since lucide has no equivalent. Keep decorative icons `aria-hidden`.
 - **Theme / cross-cutting state lives in `app/providers/`,** never inside a page.
-  Read it with the provider's hook (`useTheme()`), don't re-implement.
+  Read it with the provider's hook (`useSettings()`), don't re-implement.
 - **Context files:** a provider component and its hook/context go in *separate*
-  files (`ThemeProvider.tsx` exports only the component; `theme-context.ts`
-  exports the context + `useTheme`). This satisfies the `react-refresh`
+  files (`SettingsProvider.tsx` exports only the component; `settings-context.ts`
+  exports the context + `useSettings`). This satisfies the `react-refresh`
   only-export-components lint rule without `eslint-disable`.
 - **Env vars:** access `import.meta.env` only through `lib/config.ts`. Vite
   requires the `VITE_` prefix for client exposure.
@@ -105,7 +105,7 @@ appears. Don't pre-emptively "generalize".
   that are genuinely theme-invariant (identical in light + dark). Chart colors
   inside `WeekChart` are passed as JS values (Recharts needs literals) — keep
   them there.
-- Dark mode is class-based (`.dark` on `<html>`), driven by `ThemeProvider`.
+- Dark mode is class-based (`.dark` on `<html>`), driven by `SettingsProvider`.
 
 ## Testing
 
@@ -115,7 +115,7 @@ appears. Don't pre-emptively "generalize".
   Pure markup refactors are covered by the existing page test — keep it green and
   keep rendered output identical.
 - Components that consume a provider must be wrapped in it when rendered in tests
-  (see `pages/landing/LandingPage.test.tsx` wrapping in `<ThemeProvider>`).
+  (use `renderWithProviders` from `@/test/providers` — wraps `QueryClientProvider` + `SettingsProvider`).
 
 ## Adding things
 

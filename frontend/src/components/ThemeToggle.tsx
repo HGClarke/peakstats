@@ -1,9 +1,9 @@
 import { Moon, Sun } from "lucide-react";
-import { useTheme } from "@/app/providers/theme-context";
+import { useSettings } from "@/app/providers/settings-context";
 
-/** Light/dark switch wired to the app ThemeProvider. */
+/** Light/dark switch wired to the app SettingsProvider (persists on toggle). */
 export function ThemeToggle() {
-  const { isDark, toggleTheme } = useTheme();
+  const { isDark, toggleTheme } = useSettings();
   return (
     <button
       title="Toggle theme"
