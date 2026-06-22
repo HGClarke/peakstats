@@ -27,12 +27,13 @@ def test_start_schedules_backfill_when_started(client, monkeypatch):
                         lambda supabase, athlete_id: (
                             SyncStatusResponse(status="backfilling", progress=0, synced=0), True))
     monkeypatch.setattr(sync_service, "run_backfill",
-                        lambda supabase, settings, athlete_id: spawned.update(athlete=athlete_id))
+                        lambda supabase, settings, athlete_id: spawned.update(backfill=athlete_id))
+    monkeypatch.setattr(sync_service, "run_detail_backfill",
+                        lambda supabase, settings, athlete_id: spawned.update(detail=athlete_id))
     _auth(client)
     response = client.post("/sync/start")
     assert response.status_code == 200
-    assert response.json()["status"] == "backfilling"
-    assert spawned == {"athlete": 99}
+    assert spawned == {"backfill": 99, "detail": 99}
 
 
 def test_start_does_not_reschedule_when_already_running(client, monkeypatch):
@@ -44,6 +45,8 @@ def test_start_does_not_reschedule_when_already_running(client, monkeypatch):
         raise AssertionError("must not spawn a second backfill")
 
     monkeypatch.setattr(sync_service, "run_backfill", fail)
+    monkeypatch.setattr(sync_service, "run_detail_backfill",
+                        lambda supabase, settings, athlete_id: None)
     _auth(client)
     assert client.post("/sync/start").status_code == 200
 

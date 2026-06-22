@@ -1,6 +1,8 @@
 import logging
+import time
 from datetime import UTC, datetime
 
+import httpx
 from supabase import Client
 
 from app.clients import build_strava
@@ -8,11 +10,15 @@ from app.config import Settings
 from app.db import activities as activities_db
 from app.db import sync_state as sync_state_db
 from app.models.sync import RefreshResponse, SyncStatusResponse
+from app.services import segments as segments_service
 from app.services.tokens import get_valid_access_token
 
 logger = logging.getLogger(__name__)
 
 PER_PAGE = 200
+DETAIL_BATCH = 50          # activities pulled per DB round-trip
+DETAIL_PAUSE_S = 1.0       # spacing between Strava detail calls (well under 200/15min)
+DETAIL_BACKOFF_S = 60.0    # fallback wait when a 429 carries no Retry-After
 
 
 class SyncNotReadyError(Exception):
@@ -137,5 +143,45 @@ def refresh(supabase: Client, settings: Settings, athlete_id: int) -> RefreshRes
             supabase, athlete_id, {"last_sync_at": now}
         )
         return RefreshResponse(synced=count)
+    finally:
+        strava.close()
+
+
+def _fetch_detail_with_backoff(strava: object, access_token: str, activity_id: int) -> dict:
+    while True:
+        try:
+            return strava.get_activity(access_token, activity_id)  # type: ignore[attr-defined]
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code != 429:
+                raise
+            retry_after = exc.response.headers.get("Retry-After")
+            time.sleep(float(retry_after) if retry_after else DETAIL_BACKOFF_S)
+
+
+def run_detail_backfill(supabase: Client, settings: Settings, athlete_id: int) -> None:
+    """Fetch detail for activities lacking it; extract efforts + store splits.
+
+    Resumable: selects only activities with detail_fetched_at IS NULL, so a
+    restart mid-run continues with the remainder on the next invocation.
+    """
+    strava = build_strava(settings)
+    try:
+        access_token = get_valid_access_token(supabase, strava, athlete_id)
+        while True:
+            pending = activities_db.list_activities_needing_detail(
+                supabase, athlete_id, DETAIL_BATCH
+            )
+            if not pending:
+                break
+            for row in pending:
+                detail = _fetch_detail_with_backoff(strava, access_token, row["id"])
+                segments_service.store_activity_efforts(supabase, athlete_id, detail)
+                activities_db.mark_detail_fetched(
+                    supabase, row["id"], detail.get("splits_metric"),
+                    datetime.now(UTC).isoformat(),
+                )
+                time.sleep(DETAIL_PAUSE_S)
+    except Exception:
+        logger.exception("Detail backfill failed for athlete %s", athlete_id)
     finally:
         strava.close()
