@@ -6,7 +6,7 @@ import type { Athlete } from "@/types/athlete";
 const NAV_ITEMS: { label: string; to?: string }[] = [
   { label: "Overview", to: "/home" },
   { label: "Activities", to: "/activities" },
-  { label: "Segments" },
+  { label: "Segments", to: "/segments" },
   { label: "Goals" },
 ];
 
@@ -26,7 +26,7 @@ export function Sidebar({
   onLogout: () => void;
 }) {
   return (
-    <div className="w-[236px] flex-none border-r border-line2 flex flex-col p-[22px_16px] bg-surface-sidebar max-[760px]:hidden">
+    <div className="w-[236px] flex-none border-r border-line2 flex flex-col p-[22px_16px] bg-surface-sidebar max-[760px]:hidden transition-colors duration-300">
       <div className="px-2 mb-[30px]">
         <Logo />
       </div>

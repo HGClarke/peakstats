@@ -3,6 +3,7 @@ import AppHome from "@/pages/app-home/AppHome";
 import ActivitiesPage from "@/pages/activities/ActivitiesPage";
 import LandingPage from "@/pages/landing/LandingPage";
 import NotFoundPage from "@/pages/not-found/NotFoundPage";
+import SegmentsPage from "@/pages/segments/SegmentsPage";
 import SyncPage from "@/pages/sync/SyncPage";
 
 /**
@@ -14,6 +15,7 @@ export const routes: RouteObject[] = [
   { path: "/home", element: <AppHome /> },
   { path: "/activities", element: <ActivitiesPage /> },
   { path: "/sync", element: <SyncPage /> },
+  { path: "/segments", element: <SegmentsPage /> },
   { path: "*", element: <NotFoundPage /> },
 ];
 
