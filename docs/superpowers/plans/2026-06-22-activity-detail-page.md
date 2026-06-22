@@ -1499,7 +1499,7 @@ describe("toChartPoints", () => {
 
 describe("xAxisLabels", () => {
   it("returns 5 quarter labels", () => {
-    expect(xAxisLabels(84300, "metric")).toEqual(["0.0", "21.1", "42.2", "63.2", "84.3"]);
+    expect(xAxisLabels(84300, "metric")).toEqual(["0.0", "21.1", "42.1", "63.2", "84.3"]); // 42.15 → "42.1" (IEEE754 toFixed)
   });
 });
 ```
