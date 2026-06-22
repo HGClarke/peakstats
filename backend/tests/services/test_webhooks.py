@@ -51,6 +51,8 @@ def test_create_event_fetches_and_upserts(monkeypatch):
                         lambda supabase, rows: upserts.append(rows))
     monkeypatch.setattr(webhooks_service.sync_state_db, "upsert_sync_state",
                         lambda supabase, athlete_id, fields: states.append(fields))
+    monkeypatch.setattr(webhooks_service.activities_db, "mark_detail_fetched",
+                        lambda supabase, activity_id, splits_metric, fetched_at: None)
 
     webhooks_service.process_event(FakeSupabase(), SETTINGS, _event(aspect_type="create"))
 
@@ -152,6 +154,8 @@ def test_create_event_stores_segment_efforts(monkeypatch):
                         lambda supabase, rows: None)
     monkeypatch.setattr(webhooks_service.sync_state_db, "upsert_sync_state",
                         lambda supabase, athlete_id, fields: None)
+    monkeypatch.setattr(webhooks_service.activities_db, "mark_detail_fetched",
+                        lambda supabase, activity_id, splits_metric, fetched_at: None)
 
     def mock_store(supabase, athlete_id, det):
         stored.update(athlete=athlete_id, det=det)
@@ -162,3 +166,42 @@ def test_create_event_stores_segment_efforts(monkeypatch):
     webhooks_service.process_event(FakeSupabase(), SETTINGS, _event(aspect_type="create"))
     assert stored["athlete"] == 7
     assert stored["det"]["segment_efforts"][0]["segment"]["id"] == 2
+
+
+def test_create_event_marks_detail_fetched(monkeypatch):
+    marked = {}
+    _wire(monkeypatch)
+    monkeypatch.setattr(webhooks_service.activities_db, "upsert_activities",
+                        lambda supabase, rows: None)
+    monkeypatch.setattr(webhooks_service.sync_state_db, "upsert_sync_state",
+                        lambda supabase, athlete_id, fields: None)
+    monkeypatch.setattr(webhooks_service.segments_service, "store_activity_efforts",
+                        lambda supabase, athlete_id, det: None)
+
+    def mock_mark(supabase, activity_id, splits_metric, fetched_at):
+        marked.update(activity_id=activity_id, splits=splits_metric, fetched_at=fetched_at)
+
+    monkeypatch.setattr(webhooks_service.activities_db, "mark_detail_fetched",
+                        mock_mark)
+
+    webhooks_service.process_event(FakeSupabase(), SETTINGS, _event(aspect_type="create"))
+    assert marked["activity_id"] == 555
+    assert "fetched_at" in marked and marked["fetched_at"]
+
+
+def test_delete_event_does_not_mark_detail_fetched(monkeypatch):
+    marked = {}
+    _wire(monkeypatch)
+    monkeypatch.setattr(webhooks_service.activities_db, "delete_activity",
+                        lambda supabase, athlete_id, activity_id: None)
+    monkeypatch.setattr(webhooks_service.sync_state_db, "upsert_sync_state",
+                        lambda supabase, athlete_id, fields: None)
+
+    def mock_mark(supabase, activity_id, splits_metric, fetched_at):
+        marked.update(activity_id=activity_id)
+
+    monkeypatch.setattr(webhooks_service.activities_db, "mark_detail_fetched",
+                        mock_mark)
+
+    webhooks_service.process_event(FakeSupabase(), SETTINGS, _event(aspect_type="delete"))
+    assert not marked

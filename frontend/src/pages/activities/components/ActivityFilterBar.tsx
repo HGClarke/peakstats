@@ -13,7 +13,7 @@ interface Props {
 }
 
 const numberBox =
-  "flex items-center gap-2 h-10 bg-surface-card border border-line rounded-[10px] px-3";
+  "flex items-center gap-2 h-10 bg-surface-card border border-line rounded-[10px] px-3 transition-colors duration-300";
 const numberInput =
   "w-12 bg-transparent border-none outline-none text-ink font-mono text-[13px]";
 const label = "font-mono text-[10px] tracking-[0.08em] text-faint";
@@ -24,7 +24,7 @@ export function ActivityFilterBar({
 }: Props) {
   return (
     <div className="flex items-center gap-[10px] mb-4 flex-wrap">
-      <div className="flex items-center gap-[9px] flex-1 min-w-[220px] h-10 bg-surface-card border border-line rounded-[10px] px-[14px]">
+      <div className="flex items-center gap-[9px] flex-1 min-w-[220px] h-10 bg-surface-card border border-line rounded-[10px] px-[14px] transition-colors duration-300">
         <Search size={15} className="text-faint" aria-hidden />
         <input
           value={q}

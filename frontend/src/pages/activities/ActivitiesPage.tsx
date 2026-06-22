@@ -12,7 +12,7 @@ import { ActivityTable } from "./components/ActivityTable";
 
 function SkeletonRows() {
   return (
-    <div className="bg-surface-card border border-line rounded-2xl p-2" role="status"
+    <div className="bg-surface-card border border-line rounded-2xl p-2 transition-colors duration-300" role="status"
       aria-label="Loading activities">
       {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
         <div key={i} className="px-[18px] py-[15px]">

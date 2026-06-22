@@ -1,4 +1,5 @@
 import logging
+from datetime import UTC, datetime
 
 from supabase import Client
 
@@ -49,6 +50,10 @@ def process_event(
             row = sync_service._to_activity_row(event.owner_id, detail)
             activities_db.upsert_activities(supabase, [row])  # type: ignore[list-item]
             segments_service.store_activity_efforts(supabase, event.owner_id, detail)
+            activities_db.mark_detail_fetched(
+                supabase, detail["id"], detail.get("splits_metric"),
+                datetime.now(UTC).isoformat(),
+            )
 
         sync_state_db.upsert_sync_state(
             supabase, event.owner_id, {"last_webhook_event_id": event.event_time}

@@ -12,7 +12,7 @@ function ChartSkeleton() {
 export function DistancePanel({ week }: { week: WeekPoint[] }) {
   const { isDark } = useTheme();
   return (
-    <div className="bg-surface-card border border-line rounded-2xl p-5 mb-[18px]">
+    <div className="bg-surface-card border border-line rounded-2xl p-5 mb-[18px] transition-colors duration-300">
       <div className="flex items-center justify-between mb-[10px]">
         <span className="font-display font-medium text-[15px] text-ink">
           Distance over time
