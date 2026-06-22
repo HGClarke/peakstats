@@ -111,6 +111,36 @@ class StravaClient:
         response.raise_for_status()
         return response.json()
 
+    def get_activity_streams(
+        self,
+        access_token: str,
+        activity_id: int,
+        keys: list[str],
+        resolution: str = "high",
+    ) -> dict[str, list]:
+        """Fetch activity streams, flattened to {channel: [values]}.
+
+        Strava returns {"watts": {"data": [...], "type": "watts"}, ...} when
+        key_by_type=true; we flatten to {"watts": [...]}. Omitted channels are
+        absent. Raises on HTTP error.
+        """
+        response = self._http.get(
+            f"{API_BASE_URL}/activities/{activity_id}/streams",
+            params={
+                "keys": ",".join(keys),
+                "key_by_type": "true",
+                "resolution": resolution,
+            },
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
+        response.raise_for_status()
+        payload = response.json()
+        return {
+            channel: body["data"]
+            for channel, body in payload.items()
+            if isinstance(body, dict) and "data" in body
+        }
+
     def create_push_subscription(self, callback_url: str, verify_token: str) -> int:
         """Create the app-level Strava push subscription; returns its id."""
         response = self._http.post(
