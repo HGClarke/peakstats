@@ -15,7 +15,8 @@ def _auth(client):
 def _list() -> SegmentListResponse:
     return SegmentListResponse(segments=[SegmentListItem(
         id=5, name="Hill", distance_m=1200.0, avg_grade=4.8, best_time_s=118,
-        attempts=3, pr=True, latest_rank=1, improvement_s=4)])
+        attempts=3, pr=True, latest_rank=1, improvement_s=4,
+        recent_times_s=[130, 125, 118])])
 
 
 def test_list_requires_session(client):

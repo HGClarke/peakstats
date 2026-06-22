@@ -1,39 +1,36 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { fmtClock, fmtDate } from "@/lib/format";
 import type {
-  AttemptSortKey, EffortRowVM, SegmentDetailDTO, SegmentEffortDTO,
+  AttemptSortKey, EffortRowVM, GradeBadge, SegmentDetailDTO, SegmentEffortDTO,
   SegmentListDTO, SegmentListItemDTO, SegmentRowVM, SortDir,
 } from "@/types/segments";
 import { apiFetch } from "./client";
 
-const MINUS = "−"; // matches the design's "−4s"
-
-function ordinal(n: number): string {
-  const mod100 = n % 100;
-  if (mod100 >= 11 && mod100 <= 13) return `${n}th`;
-  return `${n}${["th", "st", "nd", "rd"][n % 10] ?? "th"}`;
-}
-
-export function statusNote(s: SegmentListItemDTO): { text: string; isPr: boolean } {
-  if (s.pr) {
-    return {
-      text: s.improvement_s != null ? `New PR · ${MINUS}${s.improvement_s}s` : "New PR",
-      isPr: true,
-    };
-  }
-  return { text: `${ordinal(s.latest_rank)} best`, isPr: false };
+/**
+ * Grade badge color-coded by steepness, mirroring the design: grey for
+ * descents, then green / yellow / amber / red as the climb gets steeper.
+ * The fill is the same color at ~12% alpha (or --track for the var-based grey).
+ */
+export function gradeBadge(avgGrade: number): GradeBadge {
+  const color =
+    avgGrade < 0 ? "var(--muted2)" :   // descent
+    avgGrade < 4 ? "#34d399" :         // flat / gentle
+    avgGrade < 8 ? "#eab308" :         // moderate
+    avgGrade < 12 ? "#f59e0b" :        // steep
+    "#ef4444";                          // very steep
+  const bg = color.startsWith("#") ? `${color}1f` : "var(--track)";
+  return { label: `${avgGrade.toFixed(1)}%`, color, bg };
 }
 
 export function toSegmentRow(s: SegmentListItemDTO): SegmentRowVM {
-  const note = statusNote(s);
   return {
     id: s.id,
     name: s.name,
-    meta: `${(s.distance_m / 1000).toFixed(1)} km · ${s.avg_grade}% avg`,
+    meta: `${(s.distance_m / 1000).toFixed(1)} km`,
     bestTime: fmtClock(s.best_time_s),
-    statusText: note.text,
-    isPr: note.isPr,
     attemptsLabel: `${s.attempts}×`,
+    grade: gradeBadge(s.avg_grade),
+    trend: s.recent_times_s.map((t, i) => ({ i, t })),
   };
 }
 

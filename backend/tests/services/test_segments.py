@@ -103,6 +103,19 @@ def test_summarize_segment_new_pr_with_improvement():
     assert item.pr is True
     assert item.latest_rank == 1
     assert item.improvement_s == 12          # 130 - 118
+    assert item.recent_times_s == [130, 118]  # oldest -> newest for the trend
+
+
+def test_summarize_segment_recent_times_caps_to_latest_8_in_order():
+    # 15 efforts; recent_times_s keeps the last 8 by date, oldest->newest
+    efforts = [
+        {"id": i, "elapsed_time_s": 100 + i, "start_date": f"2026-06-{i:02d}T08:00:00Z"}
+        for i in range(1, 16)
+    ]
+    item = svc.summarize_segment(5, "Hill", 1200.0, 4.8, efforts)
+    assert len(item.recent_times_s) == 8
+    assert item.recent_times_s[0] == 108   # effort id 8 (oldest kept)
+    assert item.recent_times_s[-1] == 115  # effort id 15 (newest)
 
 
 def test_summarize_segment_nth_best_when_latest_slower():

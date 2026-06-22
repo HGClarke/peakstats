@@ -16,6 +16,7 @@ class SegmentListItem(BaseModel):
     pr: bool
     latest_rank: int
     improvement_s: int | None
+    recent_times_s: list[int]  # recent effort times, oldest -> newest, for the trend
 
 
 class SegmentListResponse(BaseModel):

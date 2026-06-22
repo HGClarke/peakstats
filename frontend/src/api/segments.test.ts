@@ -1,33 +1,39 @@
 import { describe, expect, it } from "vitest";
 import type { SegmentEffortDTO, SegmentListItemDTO } from "@/types/segments";
 import {
-  barWidth, compareDelta, prepareAttempts, statusNote, toEffortRow, toSegmentRow,
+  barWidth, compareDelta, gradeBadge, prepareAttempts, toEffortRow, toSegmentRow,
 } from "./segments";
 
 const seg = (over: Partial<SegmentListItemDTO> = {}): SegmentListItemDTO => ({
   id: 5, name: "Hill", distance_m: 1200, avg_grade: 4.8, best_time_s: 118,
-  attempts: 8, pr: true, latest_rank: 1, improvement_s: 4, ...over,
+  attempts: 8, pr: true, latest_rank: 1, improvement_s: 4, recent_times_s: [130, 125, 118], ...over,
 });
 
-describe("statusNote", () => {
-  it("shows New PR with improvement when pr", () => {
-    expect(statusNote(seg())).toEqual({ text: "New PR · −4s", isPr: true });
+describe("gradeBadge", () => {
+  it("labels the grade to one decimal", () => {
+    expect(gradeBadge(4.8).label).toBe("4.8%");
+    expect(gradeBadge(-1.2).label).toBe("-1.2%");
   });
-  it("shows New PR without improvement when pr and no gap", () => {
-    expect(statusNote(seg({ improvement_s: null }))).toEqual({ text: "New PR", isPr: true });
+  it("color-codes by steepness", () => {
+    expect(gradeBadge(-2).color).toBe("var(--muted2)"); // descent
+    expect(gradeBadge(2).color).toBe("#34d399");         // gentle
+    expect(gradeBadge(6).color).toBe("#eab308");         // moderate
+    expect(gradeBadge(10).color).toBe("#f59e0b");        // steep
+    expect(gradeBadge(14).color).toBe("#ef4444");        // very steep
   });
-  it("shows the ordinal rank when not a pr", () => {
-    expect(statusNote(seg({ pr: false, latest_rank: 2 }))).toEqual({ text: "2nd best", isPr: false });
-    expect(statusNote(seg({ pr: false, latest_rank: 3 }))).toEqual({ text: "3rd best", isPr: false });
-    expect(statusNote(seg({ pr: false, latest_rank: 11 }))).toEqual({ text: "11th best", isPr: false });
+  it("fills with the same color at low alpha, or --track for the var grey", () => {
+    expect(gradeBadge(6).bg).toBe("#eab3081f");
+    expect(gradeBadge(-2).bg).toBe("var(--track)");
   });
 });
 
 describe("toSegmentRow", () => {
-  it("formats meta, time and attempts", () => {
+  it("formats meta (distance), time, attempts, grade badge and trend", () => {
     expect(toSegmentRow(seg())).toMatchObject({
-      id: 5, name: "Hill", meta: "1.2 km · 4.8% avg",
-      bestTime: "1:58", statusText: "New PR · −4s", isPr: true, attemptsLabel: "8×",
+      id: 5, name: "Hill", meta: "1.2 km",
+      bestTime: "1:58", attemptsLabel: "8×",
+      grade: { label: "4.8%", color: "#eab308", bg: "#eab3081f" },
+      trend: [{ i: 0, t: 130 }, { i: 1, t: 125 }, { i: 2, t: 118 }],
     });
   });
 });

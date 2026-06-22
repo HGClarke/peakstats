@@ -71,6 +71,9 @@ def store_activity_efforts(supabase: Client, athlete_id: int, detail: dict) -> N
         recompute_is_best(supabase, athlete_id, segment_id)
 
 
+RECENT_TREND_LIMIT = 8
+
+
 def summarize_segment(
     segment_id: int, name: str, distance_m: float, avg_grade: float, efforts: list[dict]
 ) -> SegmentListItem:
@@ -81,10 +84,13 @@ def summarize_segment(
     latest_rank = next(i for i, e in enumerate(ordered, 1) if e is latest)
     pr = latest_rank == 1
     improvement = times[1] - times[0] if pr and len(times) >= 2 else None
+    by_date = sorted(efforts, key=lambda e: e["start_date"])[-RECENT_TREND_LIMIT:]
+    recent_times = [e["elapsed_time_s"] for e in by_date]
     return SegmentListItem(
         id=segment_id, name=name, distance_m=distance_m, avg_grade=avg_grade,
         best_time_s=best_time, attempts=len(efforts), pr=pr,
         latest_rank=latest_rank, improvement_s=improvement,
+        recent_times_s=recent_times,
     )
 
 

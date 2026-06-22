@@ -11,6 +11,7 @@ export interface SegmentListItemDTO {
   pr: boolean;
   latest_rank: number;
   improvement_s: number | null;
+  recent_times_s: number[]; // recent effort times, oldest -> newest, for the trend
 }
 
 export interface SegmentListDTO {
@@ -39,15 +40,28 @@ export interface SegmentDetailDTO {
   efforts: SegmentEffortDTO[];
 }
 
+/** Grade badge shown next to the segment name — color-coded by steepness. */
+export interface GradeBadge {
+  label: string;  // "4.8%"
+  color: string;  // text color (hex or CSS var)
+  bg: string;     // background fill (translucent color or CSS var)
+}
+
+/** One point on a segment's recent-time trend sparkline. */
+export interface TrendPoint {
+  i: number;  // index (x)
+  t: number;  // elapsed seconds (y)
+}
+
 /** Formatted row for the segments list table. */
 export interface SegmentRowVM {
   id: number;
   name: string;
-  meta: string;        // "1.2 km · 4.8% avg"
-  bestTime: string;    // "1:58"
-  statusText: string;  // "New PR · −4s" | "2nd best"
-  isPr: boolean;
-  attemptsLabel: string; // "8×"
+  meta: string;            // "1.2 km"
+  bestTime: string;        // "1:58"
+  attemptsLabel: string;   // "8×"
+  grade: GradeBadge;
+  trend: TrendPoint[];     // recent effort times, oldest -> newest
 }
 
 /** Formatted row for the attempts table. */

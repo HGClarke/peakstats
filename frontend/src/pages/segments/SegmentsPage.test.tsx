@@ -31,7 +31,8 @@ const synced = { status: "idle", progress: 100, synced: 10, last_backfill_at: "T
 function dto(over: Partial<SegmentListDTO> = {}): SegmentListDTO {
   return {
     segments: [{ id: 5, name: "Riverside Sprint", distance_m: 1200, avg_grade: 1.2,
-      best_time_s: 118, attempts: 8, pr: true, latest_rank: 1, improvement_s: 4 }],
+      best_time_s: 118, attempts: 8, pr: true, latest_rank: 1, improvement_s: 4,
+      recent_times_s: [130, 125, 118] }],
     ...over,
   };
 }
@@ -50,7 +51,6 @@ describe("SegmentsPage", () => {
     renderPage();
     expect(screen.getByText("Riverside Sprint")).toBeInTheDocument();
     expect(screen.getByText("1:58")).toBeInTheDocument();
-    expect(screen.getByText("New PR · −4s")).toBeInTheDocument();
     expect(screen.getByText("8×")).toBeInTheDocument();
   });
 
