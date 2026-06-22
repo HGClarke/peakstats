@@ -91,10 +91,15 @@ session, and redirects to the app (sync screen on first connect, else dashboard)
 before any Strava call when `expires_at` is near, storing the new tokens.
 
 **Backfill** (the "Syncing with Strava" screen). On first connect, paginate
-`/athlete/activities`, storing summaries. Detailed fetches (splits, segment efforts,
-streams) are **lazy** — performed on ride-detail open — to respect rate limits
-(200 req / 15 min, 2000 / day). `sync_state.progress` is updated as pages load; the
-SPA polls `GET /sync/status` to track progress for the backfill screen.
+`/athlete/activities`, storing summaries. Detailed payloads (splits, segment efforts,
+streams) are filled two ways, both respecting rate limits (200 req / 15 min, 2000 /
+day): the webhook ingest extracts efforts from the detail it already fetches for each
+new ride, and a resumable, rate-limited background **detail-backfill worker** walks
+historical activities (`detail_fetched_at IS NULL`) after the summary backfill —
+storing efforts + splits and marking `detail_fetched_at` so nothing is re-fetched.
+(This supersedes the original "lazy on ride-detail open" plan.) `sync_state.progress`
+is updated as pages load; the SPA polls `GET /sync/status` to track progress for the
+backfill screen.
 
 **Real-time activity updates.** After the initial backfill, new activities arrive via
 Strava webhooks (`POST /webhooks/strava`). Once the backend ingests a new or updated
@@ -116,7 +121,11 @@ which pulls activities since `sync_state.last_sync_at`.
 
 **Segments are derived**, not fetched from the segment API. Detailed activity payloads
 include a `segment_efforts` array; the backend upserts segments and efforts from those,
-then computes `is_best`/PR per athlete+segment.
+then computes `is_best`/PR per athlete+segment. Population is via the webhook extract
+(new rides) + the background detail-backfill worker (history) described above — **not**
+lazy on ride-detail open. `GET /segments/{id}` returns the athlete's full effort list;
+attempt search/sort/pagination happens client-side.
+_(Implemented 2026-06-21 — see `2026-06-21-segments-design.md`.)_
 
 ## API surface (FastAPI)
 
@@ -128,12 +137,12 @@ then computes `is_best`/PR per athlete+segment.
 | `GET /athlete` | Current athlete profile |
 | `GET /athlete/settings` · `PATCH /athlete/settings` | Units / theme / default period |
 | `DELETE /athlete/connection` | Disconnect Strava |
-| `GET /athlete/stats/overview?period=` | KPIs (+deltas), trend series, recent rides, top segments |
+| `GET /athlete/stats/overview?period=` | KPIs (+deltas), trend series, recent rides _(top-segments panel + the heatmap/donut/highlights Overview redesign = separate spec, not yet scheduled)_ |
 | `GET /athlete/stats/trends?period=` | KPIs + full distance series |
 | `GET /activities?q=&min_dist=&min_time=&min_elev=&sort=&page=` | Filtered/sorted/paginated table |
 | `GET /activities/{id}` | Ride detail: route, KPIs, splits, elevation (lazy detail fetch) |
-| `GET /segments?q=&sort=` | Segment list |
-| `GET /segments/{id}` | Segment detail: PR + all attempts |
+| `GET /segments?q=&sort=attempts&direction=` | Segment list (derived best/attempts/PR per segment) |
+| `GET /segments/{id}` | Segment detail: meta + all efforts (attempt search/sort/paginate client-side) |
 | `POST /sync/refresh` | Manual incremental sync |
 | `GET /sync/status` | Backfill progress (polled during initial sync) |
 | `WS /ws/updates` | Real-time activity notifications (WebSocket push, post-backfill) |
