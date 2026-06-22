@@ -261,7 +261,7 @@ def get_detail(
          "distance_m": r["segments"]["distance_m"], "avg_grade": r["segments"]["avg_grade"],
          "elev_gain_m": r["segments"]["elev_gain_m"], "elapsed_time_s": r["elapsed_time_s"]}
         for r in activities_db.list_activity_climbs(supabase, athlete_id, activity_id)
-        if r.get("segments")
+        if r.get("segments") and r["segments"]["climb_category"] > 0
     ]
     climbs = [
         ClimbItem(name=c["name"], climb_category=c["climb_category"], distance_m=c["distance_m"],

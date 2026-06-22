@@ -175,7 +175,7 @@ def test_get_activity_none_when_missing():
 
 
 @respx.mock
-def test_list_activity_climbs_filters_categorized():
+def test_list_activity_climbs_scopes_to_activity():
     route = respx.route(method="GET", path="/rest/v1/segment_efforts").mock(
         return_value=Response(200, json=[
             {"elapsed_time_s": 1089, "segments": {"name": "Marincello", "climb_category": 2,

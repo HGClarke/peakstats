@@ -74,3 +74,19 @@ def test_get_detail_includes_climbs(monkeypatch):
          "distance_m": 4300.0, "avg_grade": 7.2, "elev_gain_m": 310.0}}])
     d = svc.get_detail(object(), object(), 7, 5)
     assert d.climbs[0].name == "Marincello" and d.climbs[0].vam > 0
+
+
+def test_get_detail_excludes_uncategorized_climbs(monkeypatch):
+    monkeypatch.setattr(svc.activities_db, "get_activity", lambda c, a, aid: dict(ROW))
+    monkeypatch.setattr(svc, "ensure_streams",
+        lambda c, s, a, aid: {"time": [0, 1], "watts": [200, 200]})
+    monkeypatch.setattr(svc.athletes_db, "get_athlete", lambda c, aid: {"settings": {}})
+    monkeypatch.setattr(svc.activities_db, "list_activity_climbs", lambda c, a, aid: [
+        {"elapsed_time_s": 1089, "segments": {"name": "Marincello", "climb_category": 2,
+         "distance_m": 4300.0, "avg_grade": 7.2, "elev_gain_m": 310.0}},
+        {"elapsed_time_s": 240, "segments": {"name": "Flat Segment", "climb_category": 0,
+         "distance_m": 1500.0, "avg_grade": 1.1, "elev_gain_m": 16.0}},
+    ])
+    d = svc.get_detail(object(), object(), 7, 5)
+    assert len(d.climbs) == 1
+    assert d.climbs[0].name == "Marincello" and d.climbs[0].climb_category == 2
