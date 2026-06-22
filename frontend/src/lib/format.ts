@@ -16,3 +16,12 @@ export function fmtDate(iso: string): string {
   const d = new Date(iso);
   return `${WEEKDAYS[d.getUTCDay()]} · ${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}`;
 }
+
+/** "1:58" under an hour, "1:01:01" at/over an hour, from a duration in seconds. */
+export function fmtClock(seconds: number): string {
+  const s = Math.round(seconds);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = String(s % 60).padStart(2, "0");
+  return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${sec}` : `${m}:${sec}`;
+}
