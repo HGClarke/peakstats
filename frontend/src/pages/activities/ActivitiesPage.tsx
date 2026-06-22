@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import { disconnect, logout, useAthlete } from "@/api/auth";
 import { type ActivitiesQuery, toActivityRow, useActivities } from "@/api/activities";
 import { useSyncStatus } from "@/api/sync";
+import { useSettings } from "@/app/providers/settings-context";
 import { AppShell } from "@/components/app-shell/AppShell";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import type { SortField } from "@/types/activities";
@@ -27,6 +28,7 @@ export default function ActivitiesPage() {
   const { data: athlete, error } = useAthlete();
   const { data: status } = useSyncStatus();
   const navigate = useNavigate();
+  const { units } = useSettings();
 
   const [q, setQ] = useState("");
   const [minDist, setMinDist] = useState("");
@@ -44,7 +46,7 @@ export default function ActivitiesPage() {
 
   const query: ActivitiesQuery = {
     q: dq, minDist: dDist, minTime: dTime, minElev: dElev,
-    sort, direction, page, asOf,
+    sort, direction, page, asOf, units,
   };
   const { data, isLoading } = useActivities(query);
 
@@ -87,7 +89,7 @@ export default function ActivitiesPage() {
   const handleLogout = async () => { await logout(); navigate("/", { replace: true }); };
   const handleDisconnect = async () => { await disconnect(); navigate("/", { replace: true }); };
 
-  const rows = (data?.activities ?? []).map(toActivityRow);
+  const rows = (data?.activities ?? []).map((a) => toActivityRow(a, units));
   const total = data?.total ?? 0;
   const filtersActive = Boolean(q || minDist || minTime || minElev);
   const emptyMessage =
@@ -109,6 +111,7 @@ export default function ActivitiesPage() {
           q={q} minDist={minDist} minTime={minTime} minElev={minElev}
           onQ={handleQ} onMinDist={handleMinDist} onMinTime={handleMinTime} onMinElev={handleMinElev}
           onClear={handleClear}
+          units={units}
         />
         {isLoading && !data ? (
           <SkeletonRows />

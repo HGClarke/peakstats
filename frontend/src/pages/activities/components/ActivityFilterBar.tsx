@@ -1,4 +1,5 @@
 import { Search } from "lucide-react";
+import type { Units } from "@/lib/units";
 
 interface Props {
   q: string;
@@ -10,6 +11,7 @@ interface Props {
   onMinTime: (v: string) => void;
   onMinElev: (v: string) => void;
   onClear: () => void;
+  units: Units;
 }
 
 const numberBox =
@@ -20,8 +22,10 @@ const label = "font-mono text-[10px] tracking-[0.08em] text-faint";
 
 export function ActivityFilterBar({
   q, minDist, minTime, minElev,
-  onQ, onMinDist, onMinTime, onMinElev, onClear,
+  onQ, onMinDist, onMinTime, onMinElev, onClear, units,
 }: Props) {
+  const distUnit = units === "imperial" ? "mi" : "km";
+  const elevUnit = units === "imperial" ? "ft" : "m";
   return (
     <div className="flex items-center gap-[10px] mb-4 flex-wrap">
       <div className="flex items-center gap-[9px] flex-1 min-w-[220px] h-10 bg-surface-card border border-line rounded-[10px] px-[14px] transition-colors duration-300">
@@ -37,8 +41,8 @@ export function ActivityFilterBar({
       <div className={numberBox}>
         <span className={label}>DIST ≥</span>
         <input type="number" min="0" value={minDist} onChange={(e) => onMinDist(e.target.value)}
-          placeholder="0" aria-label="Minimum distance (km)" className={numberInput} />
-        <span className="text-[11px] text-subtle">km</span>
+          placeholder="0" aria-label={`Minimum distance (${distUnit})`} className={numberInput} />
+        <span className="text-[11px] text-subtle">{distUnit}</span>
       </div>
       <div className={numberBox}>
         <span className={label}>TIME ≥</span>
@@ -49,8 +53,8 @@ export function ActivityFilterBar({
       <div className={numberBox}>
         <span className={label}>ELEV ≥</span>
         <input type="number" min="0" value={minElev} onChange={(e) => onMinElev(e.target.value)}
-          placeholder="0" aria-label="Minimum elevation (m)" className={numberInput} />
-        <span className="text-[11px] text-subtle">m</span>
+          placeholder="0" aria-label={`Minimum elevation (${elevUnit})`} className={numberInput} />
+        <span className="text-[11px] text-subtle">{elevUnit}</span>
       </div>
       <button
         onClick={onClear}

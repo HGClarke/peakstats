@@ -4,7 +4,13 @@ import { buildActivitiesQuery, toActivityRow } from "./activities";
 
 const base: ActivitiesQuery = {
   q: "", minDist: "", minTime: "", minElev: "",
-  sort: "date", direction: "desc", page: 1, asOf: null,
+  sort: "date", direction: "desc", page: 1, asOf: null, units: "metric",
+};
+
+const DTO_ITEM = {
+  id: 1, name: "River loop", type: "Ride",
+  start_date: "2026-06-16T07:42:00Z",
+  distance_m: 38700, moving_time_s: 5662, elev_gain_m: 1240, avg_speed_ms: 6.889,
 };
 
 describe("buildActivitiesQuery", () => {
@@ -32,6 +38,15 @@ describe("buildActivitiesQuery", () => {
     );
     expect(qs.get("as_of")).toBe("2026-06-21T12:00:00Z");
   });
+  it("converts imperial filter inputs to metric", () => {
+    const qs = buildActivitiesQuery({
+      q: "", minDist: "1", minTime: "", minElev: "100",
+      sort: "date", direction: "desc", page: 1, asOf: null, units: "imperial",
+    });
+    const p = new URLSearchParams(qs);
+    expect(Number(p.get("min_dist"))).toBeCloseTo(1609.344, 1);
+    expect(Number(p.get("min_elev"))).toBeCloseTo(30.48, 1);
+  });
 });
 
 describe("toActivityRow", () => {
@@ -40,7 +55,7 @@ describe("toActivityRow", () => {
       id: 1, name: "River loop", type: "Ride",
       start_date: "2026-06-16T07:42:00Z",
       distance_m: 38700, moving_time_s: 5662, elev_gain_m: 1240, avg_speed_ms: 6.889,
-    })).toEqual({
+    }, "metric")).toEqual({
       id: 1, name: "River loop", meta: "Tue · Jun 16 · Ride",
       distLabel: "38.7 km", durLabel: "1h 34m", elevLabel: "1,240 m",
       speedLabel: "24.8 km/h",
@@ -50,6 +65,18 @@ describe("toActivityRow", () => {
     expect(toActivityRow({
       id: 2, name: "No GPS", type: "Ride", start_date: "2026-06-16T07:42:00Z",
       distance_m: 1000, moving_time_s: 600, elev_gain_m: 0, avg_speed_ms: null,
-    }).speedLabel).toBe("—");
+    }, "metric").speedLabel).toBe("—");
+  });
+  it("formats a row in metric", () => {
+    const r = toActivityRow(DTO_ITEM, "metric");
+    expect(r.distLabel).toBe("38.7 km");
+    expect(r.elevLabel).toBe("1,240 m");
+    expect(r.speedLabel).toMatch(/ km\/h$/);
+  });
+  it("formats a row in imperial", () => {
+    const r = toActivityRow(DTO_ITEM, "imperial");
+    expect(r.distLabel).toMatch(/ mi$/);
+    expect(r.elevLabel).toMatch(/ ft$/);
+    expect(r.speedLabel).toMatch(/ mph$/);
   });
 });
