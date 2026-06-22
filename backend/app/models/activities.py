@@ -66,6 +66,20 @@ class ActivityStreamsResponse(BaseModel):
     velocity_smooth: list[float] | None = None
 
 
+class ZoneBucket(BaseModel):
+    z: str
+    name: str
+    range: str
+    seconds: int
+    pct: float
+
+
+class ZonesBlock(BaseModel):
+    unset: bool
+    avg: float | None = None
+    buckets: list[ZoneBucket] = []
+
+
 class ActivityDetailResponse(BaseModel):
     id: int
     name: str
@@ -82,3 +96,5 @@ class ActivityDetailResponse(BaseModel):
     work_kj: float | None = None
     avg_hr: int | None = None
     summary_polyline: str | None = None
+    power_zones: ZonesBlock = ZonesBlock(unset=True)
+    hr_zones: ZonesBlock = ZonesBlock(unset=True)

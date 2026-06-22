@@ -5,6 +5,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from supabase import Client
 
 from app.db import activities as activities_db
+from app.db import athletes as athletes_db
 from app.db import streams as streams_db
 from app.db.activities import ActivityRow
 from app.models.activities import (
@@ -18,6 +19,8 @@ from app.models.activities import (
     SortField,
     WeekDay,
     WeekTotals,
+    ZoneBucket,
+    ZonesBlock,
 )
 from app.services import analysis
 from app.services.tokens import get_valid_access_token
@@ -215,6 +218,18 @@ class ActivityNotFoundError(Exception):
     """Raised when an activity does not exist for the requesting athlete."""
 
 
+def _zones_block(
+    time: list,
+    series: list | None,
+    zone_defs: list[dict],
+    bound: int | None,
+) -> ZonesBlock:
+    if bound is None or not series:
+        return ZonesBlock(unset=True)
+    buckets = [ZoneBucket(**b) for b in analysis.time_in_zones(time, series, zone_defs)]
+    return ZonesBlock(unset=False, avg=analysis.weighted_mean(time, series), buckets=buckets)
+
+
 def get_detail(
     supabase: Client,
     strava: StravaClient,
@@ -227,6 +242,19 @@ def get_detail(
     data = ensure_streams(supabase, strava, athlete_id, activity_id)
     time = data.get("time") or []
     watts = data.get("watts")
+    hr = data.get("heartrate")
+    athlete_row = athletes_db.get_athlete(supabase, athlete_id)
+    settings: dict = athlete_row.get("settings", {}) if athlete_row else {}
+    ftp = settings.get("ftp_w")
+    hr_max = settings.get("hr_max")
+    power_block = (
+        _zones_block(time, watts, analysis.power_zones(ftp), ftp)
+        if ftp else ZonesBlock(unset=True)
+    )
+    hr_block = (
+        _zones_block(time, hr, analysis.hr_zones(hr_max), hr_max)
+        if hr_max else ZonesBlock(unset=True)
+    )
     return ActivityDetailResponse(
         id=row["id"], name=row["name"], type=row["type"],
         start_date=row["start_date"], start_date_local=row.get("start_date_local"),
@@ -238,4 +266,6 @@ def get_detail(
         work_kj=analysis.total_work_kj(time, watts),
         avg_hr=row.get("avg_hr"),
         summary_polyline=row.get("summary_polyline"),
+        power_zones=power_block,
+        hr_zones=hr_block,
     )
