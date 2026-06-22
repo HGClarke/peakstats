@@ -471,8 +471,10 @@ def test_deltas_uses_gaps_with_first_gap_backfilled():
 
 
 def test_weighted_mean_skips_none_and_weights_by_dt():
-    # values 100 for 1s, 200 for 3s -> (100*1 + 200*3)/4 = 175
-    assert analysis.weighted_mean([0, 1, 4], [100, 200, 200]) == 175.0
+    # deltas([0,1,4]) = [1,1,3] (first gap back-filled); (100*1 + 200*1 + 200*3)/5 = 180
+    assert analysis.weighted_mean([0, 1, 4], [100, 200, 200]) == 180.0
+    # None samples are skipped (their dt excluded): (100*1 + 200*1)/(1+1) = 150
+    assert analysis.weighted_mean([0, 1, 2], [100, None, 200]) == 150.0
     assert analysis.weighted_mean([0, 1, 2], [None, None, None]) is None
 
 
