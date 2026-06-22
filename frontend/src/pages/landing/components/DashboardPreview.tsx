@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { useTheme } from "@/app/providers/theme-context";
+import { useSettings } from "@/app/providers/settings-context";
 import { useWeeklySummary } from "@/api/weekly-summary";
 import { StatTiles } from "./StatTiles";
 import { RecentRides } from "./RecentRides";
@@ -45,7 +45,7 @@ function DashboardCardSkeleton() {
 }
 
 export function DashboardPreview() {
-  const { isDark } = useTheme();
+  const { isDark } = useSettings();
   const { data } = useWeeklySummary();
 
   if (!data) {

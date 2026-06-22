@@ -28,6 +28,12 @@ describe("Sidebar", () => {
       .toHaveAttribute("href", "/segments");
     expect(screen.queryByRole("link", { name: /goals/i })).toBeNull();
   });
+
+  it("links Settings to /settings and drops the Goals placeholder", () => {
+    renderSidebar();
+    expect(screen.getByRole("link", { name: /settings/i })).toHaveAttribute("href", "/settings");
+    expect(screen.queryByText("Goals")).not.toBeInTheDocument();
+  });
 });
 
 describe("SidebarContent", () => {

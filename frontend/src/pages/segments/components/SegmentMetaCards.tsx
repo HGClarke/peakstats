@@ -1,12 +1,13 @@
 // frontend/src/pages/segments/components/SegmentMetaCards.tsx
 import { fmtClock } from "@/lib/format";
+import { distanceLabel, type Units } from "@/lib/units";
 import type { SegmentDetailDTO } from "@/types/segments";
 
 const card = "bg-surface-card border border-line rounded-[14px] p-[16px_18px]";
 const label = "font-mono text-[9.5px] tracking-[0.1em] text-subtle mb-[9px]";
 const value = "font-display font-semibold text-[24px] leading-none";
 
-export function SegmentMetaCards({ seg }: { seg: SegmentDetailDTO }) {
+export function SegmentMetaCards({ seg, units }: { seg: SegmentDetailDTO; units: Units }) {
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
       <div className={card}>
@@ -15,7 +16,7 @@ export function SegmentMetaCards({ seg }: { seg: SegmentDetailDTO }) {
       </div>
       <div className={card}>
         <div className={label}>LENGTH</div>
-        <div className={value}>{(seg.distance_m / 1000).toFixed(1)} km</div>
+        <div className={value}>{distanceLabel(seg.distance_m, units)}</div>
       </div>
       <div className={card}>
         <div className={label}>AVG GRADE</div>

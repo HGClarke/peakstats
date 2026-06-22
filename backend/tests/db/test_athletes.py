@@ -44,3 +44,36 @@ def test_delete_athlete_scopes_by_id():
     )
     athletes.delete_athlete(CLIENT, 7)
     assert route.calls.last.request.url.params["id"] == "eq.7"
+
+
+@respx.mock
+def test_update_settings_writes_and_scopes_by_id():
+    route = respx.route(method="PATCH", path="/rest/v1/athletes").mock(
+        return_value=Response(
+            200,
+            json=[{
+                "id": 7, "name": "Ada", "avatar_url": None,
+                "settings": {"units": "imperial", "theme": "dark", "default_period": "week"},
+            }],
+        )
+    )
+    row = athletes.update_settings(
+        CLIENT, 7,
+        {"units": "imperial", "theme": "dark", "default_period": "week"},
+    )
+    req = route.calls.last.request
+    assert req.url.params["id"] == "eq.7"
+    assert b'"units": "imperial"' in req.content or b'"units":"imperial"' in req.content
+    assert row["settings"]["units"] == "imperial"
+
+
+@respx.mock
+def test_update_settings_returns_none_when_row_missing():
+    respx.route(method="PATCH", path="/rest/v1/athletes").mock(
+        return_value=Response(200, json=[])
+    )
+    result = athletes.update_settings(
+        CLIENT, 7,
+        {"units": "imperial", "theme": "dark", "default_period": "week"},
+    )
+    assert result is None

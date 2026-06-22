@@ -5,7 +5,7 @@ from supabase import Client
 
 from app.db import athletes as athletes_db
 from app.db import tokens as tokens_db
-from app.models.athlete import AthleteResponse
+from app.models.athlete import AthleteResponse, SettingsUpdate
 from app.strava import StravaClient
 
 
@@ -35,3 +35,22 @@ def disconnect(supabase: Client, strava: StravaClient, athlete_id: int) -> None:
         except httpx.HTTPError:
             pass  # best-effort: still drop local data if Strava is unreachable
     athletes_db.delete_athlete(supabase, athlete_id)
+
+
+def update_settings(
+    supabase: Client, athlete_id: int, patch: SettingsUpdate
+) -> AthleteResponse | None:
+    """Merge the partial settings over the current row and persist; None if missing."""
+    row = athletes_db.get_athlete(supabase, athlete_id)
+    if row is None:
+        return None
+    merged = {**row["settings"], **patch.model_dump(exclude_none=True)}
+    updated = athletes_db.update_settings(supabase, athlete_id, merged)
+    if updated is None:
+        return None
+    return AthleteResponse(
+        id=updated["id"],
+        name=updated["name"],
+        avatar_url=updated.get("avatar_url"),
+        settings=updated["settings"],
+    )

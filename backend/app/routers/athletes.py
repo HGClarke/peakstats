@@ -4,7 +4,7 @@ from supabase import Client
 from app.config import Settings, get_settings
 from app.cookies import clear_session_cookie
 from app.deps import get_current_athlete_id, get_strava, get_supabase
-from app.models.athlete import AthleteResponse
+from app.models.athlete import AthleteResponse, SettingsUpdate
 from app.services import athletes as athletes_service
 from app.strava import StravaClient
 
@@ -21,6 +21,19 @@ def get_athlete(
     if profile is None:
         raise HTTPException(status_code=404, detail="Athlete not found")
     return profile
+
+
+@router.patch("/settings", response_model=AthleteResponse)
+def update_settings(
+    patch: SettingsUpdate,
+    athlete_id: int = Depends(get_current_athlete_id),
+    supabase: Client = Depends(get_supabase),
+) -> AthleteResponse:
+    """Partial-update the athlete's settings; 404 if the record is missing."""
+    updated = athletes_service.update_settings(supabase, athlete_id, patch)
+    if updated is None:
+        raise HTTPException(status_code=404, detail="Athlete not found")
+    return updated
 
 
 @router.delete("/connection", status_code=204)

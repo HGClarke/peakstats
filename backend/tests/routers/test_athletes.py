@@ -48,3 +48,37 @@ def test_disconnect_calls_service_and_clears_cookie(client, monkeypatch):
     assert response.status_code == 204
     assert called["id"] == 99
     assert "ps_session=" in response.headers.get("set-cookie", "")
+
+
+def test_patch_settings_requires_session(client):
+    assert client.patch("/athlete/settings", json={"units": "imperial"}).status_code == 401
+
+
+def test_patch_settings_updates_and_returns_profile(client, monkeypatch):
+    monkeypatch.setattr(
+        athletes_service, "update_settings",
+        lambda supabase, athlete_id, patch: AthleteResponse(
+            id=athlete_id, name="Ada", avatar_url=None,
+            settings={"units": patch.units, "theme": "dark", "default_period": "week"}),
+    )
+    client.cookies.set(SESSION_COOKIE, sign_session(99, "test-secret"))
+    res = client.patch("/athlete/settings", json={"units": "imperial"})
+    assert res.status_code == 200
+    assert res.json()["settings"]["units"] == "imperial"
+
+
+def test_patch_settings_404_when_missing(client, monkeypatch):
+    monkeypatch.setattr(athletes_service, "update_settings",
+                        lambda supabase, athlete_id, patch: None)
+    client.cookies.set(SESSION_COOKIE, sign_session(99, "test-secret"))
+    assert client.patch("/athlete/settings", json={"theme": "light"}).status_code == 404
+
+
+def test_patch_settings_rejects_empty_body(client):
+    client.cookies.set(SESSION_COOKIE, sign_session(99, "test-secret"))
+    assert client.patch("/athlete/settings", json={}).status_code == 422
+
+
+def test_patch_settings_rejects_bad_enum(client):
+    client.cookies.set(SESSION_COOKIE, sign_session(99, "test-secret"))
+    assert client.patch("/athlete/settings", json={"units": "furlongs"}).status_code == 422

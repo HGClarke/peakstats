@@ -4,6 +4,7 @@ import { useNavigate } from "react-router";
 import { logout, useAthlete } from "@/api/auth";
 import { type SegmentsQuery, toSegmentRow, useSegments } from "@/api/segments";
 import { useSyncStatus } from "@/api/sync";
+import { useSettings } from "@/app/providers/settings-context";
 import { AppShell } from "@/components/app-shell/AppShell";
 import { Pager } from "@/components/Pager";
 import { SearchInput } from "@/components/SearchInput";
@@ -15,6 +16,7 @@ export default function SegmentsPage() {
   const { data: athlete, error } = useAthlete();
   const { data: status } = useSyncStatus();
   const navigate = useNavigate();
+  const { units } = useSettings();
 
   const [q, setQ] = useState("");
   const [direction, setDirection] = useState<SortDir>("desc");
@@ -40,7 +42,7 @@ export default function SegmentsPage() {
 
   const synced = status?.status === "idle";
   const total = data?.total ?? 0;
-  const rows = (data?.segments ?? []).map(toSegmentRow);
+  const rows = (data?.segments ?? []).map((s) => toSegmentRow(s, units));
   const emptyMessage = rows.length > 0 ? null : "No segments match your search.";
 
   const handleQ = (v: string) => { setQ(v); setPage(1); };

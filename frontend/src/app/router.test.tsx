@@ -1,15 +1,13 @@
 import { render, screen } from "@testing-library/react";
 import { createMemoryRouter, RouterProvider } from "react-router";
-import { ThemeProvider } from "@/app/providers/ThemeProvider";
+import { createQueryWrapper } from "@/test/providers";
 import { routes } from "./router";
 
 function renderAt(path: string) {
   const router = createMemoryRouter(routes, { initialEntries: [path] });
-  return render(
-    <ThemeProvider>
-      <RouterProvider router={router} />
-    </ThemeProvider>
-  );
+  return render(<RouterProvider router={router} />, {
+    wrapper: createQueryWrapper(),
+  });
 }
 
 beforeEach(() => {

@@ -5,6 +5,7 @@ import LandingPage from "@/pages/landing/LandingPage";
 import NotFoundPage from "@/pages/not-found/NotFoundPage";
 import SegmentDetailPage from "@/pages/segments/SegmentDetailPage";
 import SegmentsPage from "@/pages/segments/SegmentsPage";
+import SettingsPage from "@/pages/settings/SettingsPage";
 import SyncPage from "@/pages/sync/SyncPage";
 
 /**
@@ -18,6 +19,7 @@ export const routes: RouteObject[] = [
   { path: "/sync", element: <SyncPage /> },
   { path: "/segments", element: <SegmentsPage /> },
   { path: "/segments/:id", element: <SegmentDetailPage /> },
+  { path: "/settings", element: <SettingsPage /> },
   { path: "*", element: <NotFoundPage /> },
 ];
 

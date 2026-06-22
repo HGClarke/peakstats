@@ -7,7 +7,7 @@ const NAV_ITEMS: { label: string; to?: string }[] = [
   { label: "Overview", to: "/home" },
   { label: "Activities", to: "/activities" },
   { label: "Segments", to: "/segments" },
-  { label: "Goals" },
+  { label: "Settings", to: "/settings" },
 ];
 
 function initials(name: string): string {

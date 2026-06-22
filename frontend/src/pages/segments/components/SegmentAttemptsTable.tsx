@@ -4,6 +4,7 @@ import { ArrowDown, ArrowUp } from "lucide-react";
 import { prepareAttempts } from "@/api/segments";
 import { Pager } from "@/components/Pager";
 import { SearchInput } from "@/components/SearchInput";
+import type { Units } from "@/lib/units";
 import type { AttemptSortKey, SegmentEffortDTO, SortDir } from "@/types/segments";
 
 const PAGE_SIZE = 8;
@@ -18,11 +19,12 @@ const COLUMNS: { label: string; key: AttemptSortKey }[] = [
 const grid = "grid grid-cols-[1.25fr_1.3fr_0.9fr_1fr_1fr_0.85fr] gap-3 items-center";
 
 export function SegmentAttemptsTable({
-  efforts, selectedId, onSelect,
+  efforts, selectedId, onSelect, units,
 }: {
   efforts: SegmentEffortDTO[];
   selectedId: number;
   onSelect: (id: number) => void;
+  units: Units;
 }) {
   const [query, setQuery] = useState("");
   const [sortKey, setSortKey] = useState<AttemptSortKey>("date");
@@ -30,7 +32,7 @@ export function SegmentAttemptsTable({
   const [page, setPage] = useState(1);
 
   const { rows, total, totalPages } = prepareAttempts(efforts, {
-    query, sortKey, sortDir, page, pageSize: PAGE_SIZE,
+    query, sortKey, sortDir, page, pageSize: PAGE_SIZE, units,
   });
 
   const sort = (key: AttemptSortKey) => {
