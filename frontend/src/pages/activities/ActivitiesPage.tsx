@@ -6,8 +6,8 @@ import { useSyncStatus } from "@/api/sync";
 import { AppShell } from "@/components/app-shell/AppShell";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import type { SortField } from "@/types/activities";
+import { Pager } from "@/components/Pager";
 import { ActivityFilterBar } from "./components/ActivityFilterBar";
-import { ActivityPager } from "./components/ActivityPager";
 import { ActivityTable } from "./components/ActivityTable";
 
 function SkeletonRows() {
@@ -118,12 +118,13 @@ export default function ActivitiesPage() {
               rows={rows} sort={sort} direction={direction}
               onSort={handleSort} emptyMessage={emptyMessage}
             />
-            <ActivityPager
+            <Pager
               page={data?.page ?? 1}
               totalPages={data?.total_pages ?? 1}
               total={total}
               pageSize={data?.page_size ?? 9}
               onPage={setPage}
+              noun="activities"
             />
           </>
         )}

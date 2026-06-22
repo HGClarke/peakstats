@@ -6,12 +6,13 @@ interface Props {
   total: number;
   pageSize: number;
   onPage: (page: number) => void;
+  noun: string;
 }
 
 const edgeBtn =
   "h-[34px] px-3 rounded-[8px] border border-line bg-transparent text-subtle text-[13px] font-medium disabled:opacity-40 disabled:cursor-default enabled:cursor-pointer";
 
-export function ActivityPager({ page, totalPages, total, pageSize, onPage }: Props) {
+export function Pager({ page, totalPages, total, pageSize, onPage, noun }: Props) {
   if (totalPages <= 1) return null;
   const start = (page - 1) * pageSize + 1;
   const end = Math.min(total, page * pageSize);
@@ -19,7 +20,7 @@ export function ActivityPager({ page, totalPages, total, pageSize, onPage }: Pro
   return (
     <div className="flex items-center justify-between mt-[18px]">
       <span className="font-mono text-[11px] text-faint">
-        Showing {start}–{end} of {total} activities
+        Showing {start}–{end} of {total} {noun}
       </span>
       <div className="flex items-center gap-[6px]">
         <button className={edgeBtn} disabled={page === 1} onClick={() => onPage(page - 1)}>
