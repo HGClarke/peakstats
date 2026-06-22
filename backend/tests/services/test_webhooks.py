@@ -123,3 +123,42 @@ def test_fetch_error_is_swallowed(monkeypatch):
     monkeypatch.setattr(webhooks_service.sync_state_db, "upsert_sync_state", fail_state)
     # Should not raise.
     webhooks_service.process_event(FakeSupabase(), SETTINGS, _event(aspect_type="update"))
+
+
+def test_create_event_stores_segment_efforts(monkeypatch):
+    stored = {}
+    strava = _wire(monkeypatch)
+
+    # detail payload carries one segment effort
+    def detail(access_token, activity_id):
+        strava.fetched.append(activity_id)
+        return {
+            "id": activity_id, "name": "Ride", "type": "Ride",
+            "start_date": "2026-06-21T08:00:00Z", "distance": 1000.0,
+            "moving_time": 100, "elapsed_time": 110, "total_elevation_gain": 5.0,
+            "segment_efforts": [{
+                "id": 1, "elapsed_time": 60,
+                "start_date": "2026-06-21T08:00:00Z", "average_watts": 200.0,
+                "average_heartrate": 150.0,
+                "segment": {
+                    "id": 2, "name": "Sprint", "distance": 500.0,
+                    "average_grade": 1.0
+                }
+            }]
+        }
+
+    monkeypatch.setattr(strava, "get_activity", detail)
+    monkeypatch.setattr(webhooks_service.activities_db, "upsert_activities",
+                        lambda supabase, rows: None)
+    monkeypatch.setattr(webhooks_service.sync_state_db, "upsert_sync_state",
+                        lambda supabase, athlete_id, fields: None)
+
+    def mock_store(supabase, athlete_id, det):
+        stored.update(athlete=athlete_id, det=det)
+
+    monkeypatch.setattr(webhooks_service.segments_service, "store_activity_efforts",
+                        mock_store)
+
+    webhooks_service.process_event(FakeSupabase(), SETTINGS, _event(aspect_type="create"))
+    assert stored["athlete"] == 7
+    assert stored["det"]["segment_efforts"][0]["segment"]["id"] == 2
