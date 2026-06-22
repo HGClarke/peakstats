@@ -895,7 +895,11 @@ const MO = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct"
 
 /** "Sat · Jun 21, 2026 · 7:42 AM" from start_date_local (fallback start_date). */
 export function metaLabel(d: ActivityDetailDTO): string {
-  const iso = d.start_date_local ?? d.start_date;
+  // start_date_local is a naive wall-clock string (no zone); start_date ends in Z.
+  // Append Z to naive strings so `new Date` parses them as UTC and getUTC* returns
+  // the intended wall-clock components regardless of the machine's timezone.
+  const raw = d.start_date_local ?? d.start_date;
+  const iso = raw.endsWith("Z") || /[+-]\d\d:\d\d$/.test(raw) ? raw : `${raw}Z`;
   const t = new Date(iso);
   const h = t.getUTCHours();
   const m = t.getUTCMinutes();
