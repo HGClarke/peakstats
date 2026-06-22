@@ -7,7 +7,6 @@ const NAV_ITEMS: { label: string; to?: string }[] = [
   { label: "Overview", to: "/home" },
   { label: "Activities", to: "/activities" },
   { label: "Segments" },
-  { label: "Trends" },
   { label: "Goals" },
 ];
 
@@ -34,8 +33,8 @@ export function Sidebar({
       <nav className="flex flex-col gap-1">
         {NAV_ITEMS.map(({ label, to }) => {
           const active = label === navActive;
-          const className = `flex items-center gap-[11px] px-[11px] py-[9px] rounded-[9px] ${
-            active ? "bg-strava-soft" : ""
+          const className = `flex items-center gap-[11px] px-[11px] py-[9px] rounded-[9px] transition-colors ${
+            active ? "bg-strava-soft" : "hover:bg-surface-inset"
           }`;
           const inner = (
             <>
