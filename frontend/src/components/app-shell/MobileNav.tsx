@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { X } from "lucide-react";
 import type { Athlete } from "@/types/athlete";
 import { SidebarContent } from "./Sidebar";
@@ -24,12 +24,17 @@ export function MobileNav({
   onLogout: () => void;
 }) {
   const closeRef = useRef<HTMLButtonElement>(null);
+  const onCloseRef = useRef(onClose);
+
+  useLayoutEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     if (!open) return;
     const prevFocused = document.activeElement as HTMLElement | null;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") onCloseRef.current();
     };
     document.addEventListener("keydown", onKey);
     const prevOverflow = document.body.style.overflow;
@@ -40,7 +45,7 @@ export function MobileNav({
       document.body.style.overflow = prevOverflow;
       prevFocused?.focus?.();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
 
