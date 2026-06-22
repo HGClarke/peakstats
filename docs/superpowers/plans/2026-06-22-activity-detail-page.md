@@ -832,7 +832,7 @@ describe("toPrimaryStats", () => {
 
 describe("metaLabel", () => {
   it("formats the local date/time", () => {
-    expect(metaLabel(d())).toBe("Sat · Jun 21, 2026 · 7:42 AM");
+    expect(metaLabel(d())).toBe("Sun · Jun 21, 2026 · 7:42 AM"); // 2026-06-21 is a Sunday
   });
 });
 ```
