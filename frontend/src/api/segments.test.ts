@@ -30,12 +30,16 @@ describe("gradeBadge", () => {
 
 describe("toSegmentRow", () => {
   it("formats meta (distance), time, attempts, grade badge and trend", () => {
-    expect(toSegmentRow(seg())).toMatchObject({
+    expect(toSegmentRow(seg(), "metric")).toMatchObject({
       id: 5, name: "Hill", meta: "1.2 km",
       bestTime: "1:58", attemptsLabel: "8×",
       grade: { label: "4.8%", color: "#eab308", bg: "#eab3081f" },
       trend: [{ i: 0, t: 130 }, { i: 1, t: 125 }, { i: 2, t: 118 }],
     });
+  });
+  it("formats a segment row in imperial", () => {
+    const row = toSegmentRow(seg(), "imperial"); // distance_m = 1200
+    expect(row.meta).toMatch(/ mi$/);
   });
 });
 
@@ -46,15 +50,19 @@ const eff = (over: Partial<SegmentEffortDTO> = {}): SegmentEffortDTO => ({
 
 describe("toEffortRow", () => {
   it("formats an effort row", () => {
-    expect(toEffortRow(eff())).toMatchObject({
+    expect(toEffortRow(eff(), "metric")).toMatchObject({
       id: 10, date: "Jun 16", activity: "River loop", time: "1:58",
       power: "240 W", speed: "36.7 km/h", hr: "158 bpm", isBest: true,
     });
   });
   it("uses an em dash for missing power/hr", () => {
-    const r = toEffortRow(eff({ avg_watts: null, avg_hr: null }));
+    const r = toEffortRow(eff({ avg_watts: null, avg_hr: null }), "metric");
     expect(r.power).toBe("—");
     expect(r.hr).toBe("—");
+  });
+  it("formats an effort speed per units", () => {
+    expect(toEffortRow(eff(), "metric").speed).toMatch(/ km\/h$/);
+    expect(toEffortRow(eff(), "imperial").speed).toMatch(/ mph$/);
   });
 });
 
@@ -104,16 +112,16 @@ describe("prepareAttempts", () => {
     eff({ id: 3, activity_name: "Club ride", elapsed_time_s: 125, start_date: "2026-06-15T00:00:00Z" }),
   ];
   it("filters by activity name", () => {
-    const out = prepareAttempts(efforts, { query: "hill", sortKey: "date", sortDir: "desc", page: 1, pageSize: 10 });
+    const out = prepareAttempts(efforts, { query: "hill", sortKey: "date", sortDir: "desc", page: 1, pageSize: 10, units: "metric" });
     expect(out.total).toBe(1);
     expect(out.rows[0].activity).toBe("Hill repeats");
   });
   it("sorts by time ascending", () => {
-    const out = prepareAttempts(efforts, { query: "", sortKey: "time", sortDir: "asc", page: 1, pageSize: 10 });
+    const out = prepareAttempts(efforts, { query: "", sortKey: "time", sortDir: "asc", page: 1, pageSize: 10, units: "metric" });
     expect(out.rows.map((r) => r.id)).toEqual([1, 3, 2]);
   });
   it("paginates", () => {
-    const out = prepareAttempts(efforts, { query: "", sortKey: "time", sortDir: "asc", page: 2, pageSize: 2 });
+    const out = prepareAttempts(efforts, { query: "", sortKey: "time", sortDir: "asc", page: 2, pageSize: 2, units: "metric" });
     expect(out.totalPages).toBe(2);
     expect(out.rows.map((r) => r.id)).toEqual([2]);
   });

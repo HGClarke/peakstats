@@ -1,5 +1,6 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { fmtClock, fmtDate } from "@/lib/format";
+import { distanceLabel, speedLabel, type Units } from "@/lib/units";
 import type {
   AttemptSortKey, EffortRowVM, GradeBadge, SegmentDetailDTO, SegmentEffortDTO,
   SegmentListDTO, SegmentListItemDTO, SegmentRowVM, SortDir,
@@ -22,11 +23,11 @@ export function gradeBadge(avgGrade: number): GradeBadge {
   return { label: `${avgGrade.toFixed(1)}%`, color, bg };
 }
 
-export function toSegmentRow(s: SegmentListItemDTO): SegmentRowVM {
+export function toSegmentRow(s: SegmentListItemDTO, units: Units): SegmentRowVM {
   return {
     id: s.id,
     name: s.name,
-    meta: `${(s.distance_m / 1000).toFixed(1)} km`,
+    meta: distanceLabel(s.distance_m, units),
     bestTime: fmtClock(s.best_time_s),
     attemptsLabel: `${s.attempts}×`,
     grade: gradeBadge(s.avg_grade),
@@ -34,14 +35,14 @@ export function toSegmentRow(s: SegmentListItemDTO): SegmentRowVM {
   };
 }
 
-export function toEffortRow(e: SegmentEffortDTO): EffortRowVM {
+export function toEffortRow(e: SegmentEffortDTO, units: Units): EffortRowVM {
   return {
     id: e.id,
     date: fmtDate(e.start_date).replace(/^\w+ · /, ""), // "Jun 16"
     activity: e.activity_name,
     time: fmtClock(e.elapsed_time_s),
     power: e.avg_watts === null ? "—" : `${Math.round(e.avg_watts)} W`,
-    speed: `${(e.avg_speed_ms * 3.6).toFixed(1)} km/h`,
+    speed: speedLabel(e.avg_speed_ms, units),
     hr: e.avg_hr === null ? "—" : `${e.avg_hr} bpm`,
     isBest: e.is_best,
   };
@@ -68,7 +69,7 @@ const ATTEMPT_KEYS: Record<AttemptSortKey, (e: SegmentEffortDTO) => number | str
 
 export function prepareAttempts(
   efforts: SegmentEffortDTO[],
-  opts: { query: string; sortKey: AttemptSortKey; sortDir: SortDir; page: number; pageSize: number },
+  opts: { query: string; sortKey: AttemptSortKey; sortDir: SortDir; page: number; pageSize: number; units: Units },
 ): { rows: EffortRowVM[]; total: number; totalPages: number } {
   const q = opts.query.trim().toLowerCase();
   const filtered = efforts.filter(
@@ -89,7 +90,7 @@ export function prepareAttempts(
   const totalPages = Math.max(1, Math.ceil(total / opts.pageSize));
   const start = (opts.page - 1) * opts.pageSize;
   return {
-    rows: sorted.slice(start, start + opts.pageSize).map(toEffortRow),
+    rows: sorted.slice(start, start + opts.pageSize).map((e) => toEffortRow(e, opts.units)),
     total,
     totalPages,
   };

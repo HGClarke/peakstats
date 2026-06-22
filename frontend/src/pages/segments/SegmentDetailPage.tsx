@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router";
 import { logout, useAthlete } from "@/api/auth";
 import { useSegment } from "@/api/segments";
 import { useSyncStatus } from "@/api/sync";
+import { useSettings } from "@/app/providers/settings-context";
 import { AppShell } from "@/components/app-shell/AppShell";
 import { SegmentAttemptsTable } from "./components/SegmentAttemptsTable";
 import { SegmentCompare } from "./components/SegmentCompare";
@@ -17,6 +18,7 @@ export default function SegmentDetailPage() {
   const { data: seg, isLoading } = useSegment(segmentId);
   const navigate = useNavigate();
 
+  const { units } = useSettings();
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
   useEffect(() => {
@@ -48,12 +50,13 @@ export default function SegmentDetailPage() {
           <div role="status" aria-label="Loading segment" className="h-24 rounded-2xl bg-skel animate-pkskel" />
         ) : (
           <>
-            <SegmentMetaCards seg={seg} />
-            <SegmentCompare best={best} selected={selected} />
+            <SegmentMetaCards seg={seg} units={units} />
+            <SegmentCompare best={best} selected={selected} units={units} />
             <SegmentAttemptsTable
               efforts={seg.efforts}
               selectedId={selected.id}
               onSelect={setSelectedId}
+              units={units}
             />
           </>
         )}

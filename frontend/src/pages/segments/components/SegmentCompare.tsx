@@ -1,10 +1,11 @@
 // frontend/src/pages/segments/components/SegmentCompare.tsx
 import { barWidth, compareDelta, toEffortRow } from "@/api/segments";
 import { fmtClock } from "@/lib/format";
+import type { Units } from "@/lib/units";
 import type { SegmentEffortDTO } from "@/types/segments";
 
-function Stats({ e }: { e: SegmentEffortDTO }) {
-  const r = toEffortRow(e);
+function Stats({ e, units }: { e: SegmentEffortDTO; units: Units }) {
+  const r = toEffortRow(e, units);
   const item = (l: string, v: string) => (
     <div>
       <div className="font-mono text-[9.5px] text-subtle mb-1">{l}</div>
@@ -20,7 +21,7 @@ function Stats({ e }: { e: SegmentEffortDTO }) {
   );
 }
 
-export function SegmentCompare({ best, selected }: { best: SegmentEffortDTO; selected: SegmentEffortDTO }) {
+export function SegmentCompare({ best, selected, units }: { best: SegmentEffortDTO; selected: SegmentEffortDTO; units: Units }) {
   const delta = compareDelta(best.elapsed_time_s, selected.elapsed_time_s);
   const max = Math.max(best.elapsed_time_s, selected.elapsed_time_s);
   return (
@@ -33,7 +34,7 @@ export function SegmentCompare({ best, selected }: { best: SegmentEffortDTO; sel
             <span className="text-[12.5px] font-medium text-ink2">Personal best</span>
           </div>
           <div className="font-display font-semibold text-[34px] leading-none mb-[14px]">{fmtClock(best.elapsed_time_s)}</div>
-          <Stats e={best} />
+          <Stats e={best} units={units} />
         </div>
         <div className="bg-surface-inset border border-line rounded-[14px] p-[18px_20px]">
           <div className="flex items-center gap-2 mb-3">
@@ -46,7 +47,7 @@ export function SegmentCompare({ best, selected }: { best: SegmentEffortDTO; sel
               {delta.text}
             </span>
           </div>
-          <Stats e={selected} />
+          <Stats e={selected} units={units} />
         </div>
       </div>
       <div className="flex flex-col gap-3">
