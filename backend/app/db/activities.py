@@ -115,6 +115,14 @@ def list_activities_filtered(
     return cast(list[ActivityRow], resp.data), (resp.count or 0)
 
 
+def get_activity(client: Client, athlete_id: int, activity_id: int) -> ActivityRow | None:
+    resp = (
+        client.table("activities").select("*")
+        .eq("id", activity_id).eq("athlete_id", athlete_id).execute()
+    )
+    return cast(ActivityRow, resp.data[0]) if resp.data else None
+
+
 def delete_activity(client: Client, athlete_id: int, activity_id: int) -> None:
     client.table("activities").delete().eq("id", activity_id).eq(
         "athlete_id", athlete_id

@@ -64,3 +64,21 @@ class ActivityStreamsResponse(BaseModel):
     watts: list[float | None] | None = None
     heartrate: list[int | None] | None = None
     velocity_smooth: list[float] | None = None
+
+
+class ActivityDetailResponse(BaseModel):
+    id: int
+    name: str
+    type: str
+    start_date: str
+    start_date_local: str | None = None
+    location: str | None = None
+    distance_m: float
+    moving_time_s: int
+    elev_gain_m: float
+    avg_speed_ms: float | None = None
+    avg_power_w: float | None = None
+    normalized_power_w: float | None = None
+    work_kj: float | None = None
+    avg_hr: int | None = None
+    summary_polyline: str | None = None

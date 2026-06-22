@@ -155,3 +155,20 @@ def test_mark_detail_fetched_updates_row():
     req = route.calls.last.request
     assert req.url.params["id"] == "eq.3"
     assert b"detail_fetched_at" in req.content
+
+
+@respx.mock
+def test_get_activity_scopes_to_athlete():
+    route = respx.route(method="GET", path="/rest/v1/activities").mock(
+        return_value=Response(200, json=[{"id": 5, "athlete_id": 7, "name": "Ride"}]))
+    row = activities.get_activity(CLIENT, 7, 5)
+    params = route.calls.last.request.url.params
+    assert params["id"] == "eq.5" and params["athlete_id"] == "eq.7"
+    assert row is not None and row["id"] == 5
+
+
+@respx.mock
+def test_get_activity_none_when_missing():
+    respx.route(method="GET", path="/rest/v1/activities").mock(
+        return_value=Response(200, json=[]))
+    assert activities.get_activity(CLIENT, 7, 5) is None

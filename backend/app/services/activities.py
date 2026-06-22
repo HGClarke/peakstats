@@ -8,6 +8,7 @@ from app.db import activities as activities_db
 from app.db import streams as streams_db
 from app.db.activities import ActivityRow
 from app.models.activities import (
+    ActivityDetailResponse,
     ActivityListItem,
     ActivityListResponse,
     ActivityStreamsResponse,
@@ -18,6 +19,7 @@ from app.models.activities import (
     WeekDay,
     WeekTotals,
 )
+from app.services import analysis
 from app.services.tokens import get_valid_access_token
 from app.strava import StravaClient
 
@@ -206,4 +208,34 @@ def get_streams_payload(
         watts=data.get("watts"),
         heartrate=data.get("heartrate"),
         velocity_smooth=data.get("velocity_smooth"),
+    )
+
+
+class ActivityNotFoundError(Exception):
+    """Raised when an activity does not exist for the requesting athlete."""
+
+
+def get_detail(
+    supabase: Client,
+    strava: StravaClient,
+    athlete_id: int,
+    activity_id: int,
+) -> ActivityDetailResponse:
+    row = activities_db.get_activity(supabase, athlete_id, activity_id)
+    if row is None:
+        raise ActivityNotFoundError(f"activity {activity_id} not found for athlete")
+    data = ensure_streams(supabase, strava, athlete_id, activity_id)
+    time = data.get("time") or []
+    watts = data.get("watts")
+    return ActivityDetailResponse(
+        id=row["id"], name=row["name"], type=row["type"],
+        start_date=row["start_date"], start_date_local=row.get("start_date_local"),
+        location=None,
+        distance_m=row["distance_m"], moving_time_s=row["moving_time_s"],
+        elev_gain_m=row["elev_gain_m"], avg_speed_ms=row.get("avg_speed_ms"),
+        avg_power_w=analysis.weighted_mean(time, watts) if watts else None,
+        normalized_power_w=analysis.normalized_power(time, watts),
+        work_kj=analysis.total_work_kj(time, watts),
+        avg_hr=row.get("avg_hr"),
+        summary_polyline=row.get("summary_polyline"),
     )
