@@ -14,19 +14,24 @@ function initials(name: string): string {
   return name.split(" ").map((p) => p[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
 }
 
-export function Sidebar({
-  navActive,
-  athlete,
-  syncLabel,
-  onLogout,
-}: {
+type SidebarProps = {
   navActive: string;
   athlete: Athlete | null;
   syncLabel: string;
   onLogout: () => void;
-}) {
+};
+
+/** Logo + nav + athlete footer. Shared by the desktop column and the mobile drawer.
+ *  Renders a fragment; the caller provides the flex-column container. */
+export function SidebarContent({
+  navActive,
+  athlete,
+  syncLabel,
+  onLogout,
+  onNavigate,
+}: SidebarProps & { onNavigate?: () => void }) {
   return (
-    <div className="w-[236px] flex-none border-r border-line2 flex flex-col p-[22px_16px] bg-surface-sidebar max-[760px]:hidden">
+    <>
       <div className="px-2 mb-[30px]">
         <Logo />
       </div>
@@ -49,7 +54,7 @@ export function Sidebar({
             </>
           );
           return to ? (
-            <Link key={label} to={to} className={className}>
+            <Link key={label} to={to} className={className} onClick={onNavigate}>
               {inner}
             </Link>
           ) : (
@@ -91,6 +96,16 @@ export function Sidebar({
           <LogOut size={16} aria-hidden />
         </button>
       </div>
+    </>
+  );
+}
+
+/** Desktop sidebar column. Hidden below the `nav` breakpoint — the mobile drawer
+ *  (see MobileNav) takes over there. */
+export function Sidebar(props: SidebarProps) {
+  return (
+    <div className="w-[236px] flex-none border-r border-line2 flex flex-col p-[22px_16px] bg-surface-sidebar max-nav:hidden">
+      <SidebarContent {...props} />
     </div>
   );
 }

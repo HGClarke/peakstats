@@ -122,6 +122,9 @@
 
 /* ── Custom design tokens ─────────────────────────────────── */
 @theme inline {
+  /* Layout breakpoints */
+  --breakpoint-nav: 760px;
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -204,9 +207,13 @@
 @keyframes pkshimmer { 0% { transform: translateX(-120%); } 100% { transform: translateX(420%); } }
 @keyframes pkskel { 0%, 100% { opacity: 0.5; } 50% { opacity: 0.85; } }
 @keyframes pkrise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pkslidein { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+@keyframes pkfadein { from { opacity: 0; } to { opacity: 1; } }
 
 .animate-pkpulse { animation: pkpulse 1.2s ease-in-out infinite; }
 .animate-pkspin { animation: pkspin 0.7s linear infinite; }
 .animate-pkshimmer { animation: pkshimmer 1.5s linear infinite; }
 .animate-pkskel { animation: pkskel 1.6s ease-in-out infinite; }
 .animate-pkrise { animation: pkrise 0.35s ease both; }
+.animate-pkslidein { animation: pkslidein 0.22s ease both; }
+.animate-pkfadein { animation: pkfadein 0.2s ease both; }

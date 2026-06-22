@@ -9,16 +9,20 @@ const athlete = {
   settings: { units: "metric", theme: "dark", default_period: "week" },
 };
 
+function renderShell(onLogout: () => void = () => {}) {
+  renderWithProviders(
+    <MemoryRouter>
+      <AppShell navActive="Overview" athlete={athlete} syncLabel="Up to date"
+        onLogout={onLogout} title="Home">
+        <div>body</div>
+      </AppShell>
+    </MemoryRouter>,
+  );
+}
+
 describe("AppShell", () => {
   it("renders nav, title, and the athlete name", () => {
-    renderWithProviders(
-      <MemoryRouter>
-        <AppShell navActive="Overview" athlete={athlete} syncLabel="Up to date"
-          onLogout={() => {}} title="Home">
-          <div>body</div>
-        </AppShell>
-      </MemoryRouter>,
-    );
+    renderShell();
     expect(screen.getByText("Overview")).toBeInTheDocument();
     expect(screen.getByText("Activities")).toBeInTheDocument();
     expect(screen.getByText("Ada Lovelace")).toBeInTheDocument();
@@ -27,15 +31,15 @@ describe("AppShell", () => {
 
   it("calls onLogout when the logout button is clicked", () => {
     const onLogout = vi.fn();
-    renderWithProviders(
-      <MemoryRouter>
-        <AppShell navActive="Overview" athlete={athlete} syncLabel="Up to date"
-          onLogout={onLogout} title="Overview">
-          <div>body</div>
-        </AppShell>
-      </MemoryRouter>,
-    );
+    renderShell(onLogout);
     fireEvent.click(screen.getByRole("button", { name: /log out/i }));
     expect(onLogout).toHaveBeenCalled();
+  });
+
+  it("opens the mobile nav drawer when the menu button is clicked", () => {
+    renderShell();
+    expect(screen.queryByRole("dialog")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /open navigation/i }));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 });
