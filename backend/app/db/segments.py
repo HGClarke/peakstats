@@ -8,6 +8,8 @@ class SegmentRow(TypedDict):
     name: str
     distance_m: float
     avg_grade: float
+    climb_category: int
+    elev_gain_m: float
 
 
 class SegmentEffortRow(TypedDict):
