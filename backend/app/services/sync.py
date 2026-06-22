@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 PER_PAGE = 200
 DETAIL_BATCH = 50          # activities pulled per DB round-trip
-DETAIL_PAUSE_S = 1.0       # spacing between Strava detail calls (well under 200/15min)
+DETAIL_PAUSE_S = 5.0       # ~12 calls/min = 180/15min, just under Strava's 200/15min cap
 DETAIL_BACKOFF_S = 60.0    # fallback wait when a 429 carries no Retry-After
 
 
