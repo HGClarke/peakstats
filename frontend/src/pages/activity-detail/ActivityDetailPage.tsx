@@ -8,6 +8,7 @@ import RouteHero from "./components/RouteHero";
 import { PrimaryStats } from "./components/PrimaryStats";
 import { PowerChart } from "./components/PowerChart";
 import { ElevationChart } from "./components/ElevationChart";
+import { ZonesPanel } from "./components/ZonesPanel";
 
 export default function ActivityDetailPage() {
   const { id } = useParams();
@@ -44,6 +45,12 @@ export default function ActivityDetailPage() {
               <PrimaryStats stats={toPrimaryStats(detail, units)} />
             </div>
             <PowerChart detail={detail} streams={streams} />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+              <ZonesPanel title="Power zones" meta="TIME IN ZONE" block={detail.power_zones} />
+              <ZonesPanel title="Heart-rate zones"
+                meta={detail.hr_zones.avg ? `AVG ${Math.round(detail.hr_zones.avg)} BPM` : ""}
+                block={detail.hr_zones} />
+            </div>
             <ElevationChart detail={detail} streams={streams} />
           </>
         )}

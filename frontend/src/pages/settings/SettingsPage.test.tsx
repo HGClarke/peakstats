@@ -45,3 +45,11 @@ it("disconnect confirms then deletes and redirects", async () => {
   await waitFor(() => expect(disconnect).toHaveBeenCalled());
   await waitFor(() => expect(screen.getByText("landing")).toBeInTheDocument());
 });
+
+it("typing into FTP watts and blurring calls patchSettings with ftp_w", async () => {
+  renderPage();
+  const input = screen.getByRole("spinbutton", { name: "FTP watts" });
+  fireEvent.change(input, { target: { value: "280" } });
+  fireEvent.blur(input);
+  await waitFor(() => expect(patchSettings).toHaveBeenCalledWith({ ftp_w: 280 }));
+});
