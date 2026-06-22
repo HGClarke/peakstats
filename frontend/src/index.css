@@ -122,6 +122,9 @@
 
 /* ── Custom design tokens ─────────────────────────────────── */
 @theme inline {
+  /* Layout breakpoints */
+  --breakpoint-nav: 760px;
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);

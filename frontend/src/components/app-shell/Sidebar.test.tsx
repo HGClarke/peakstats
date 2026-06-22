@@ -1,7 +1,7 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
-import { describe, expect, it } from "vitest";
-import { Sidebar } from "./Sidebar";
+import { describe, expect, it, vi } from "vitest";
+import { Sidebar, SidebarContent } from "./Sidebar";
 
 const athlete = {
   id: 1, name: "Ada Lovelace", avatar_url: null,
@@ -25,5 +25,19 @@ describe("Sidebar", () => {
     expect(screen.getByRole("link", { name: /overview/i }))
       .toHaveAttribute("href", "/home");
     expect(screen.queryByRole("link", { name: /segments/i })).toBeNull();
+  });
+});
+
+describe("SidebarContent", () => {
+  it("calls onNavigate when a built link is clicked", () => {
+    const onNavigate = vi.fn();
+    render(
+      <MemoryRouter>
+        <SidebarContent navActive="Overview" athlete={athlete}
+          syncLabel="Up to date" onLogout={() => {}} onNavigate={onNavigate} />
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByRole("link", { name: /activities/i }));
+    expect(onNavigate).toHaveBeenCalled();
   });
 });
