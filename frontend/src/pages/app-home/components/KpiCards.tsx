@@ -7,7 +7,7 @@ export function KpiCards({ kpis }: { kpis: Kpi[] }) {
       {kpis.map((k) => (
         <div
           key={k.label}
-          className="bg-surface-card border border-line rounded-2xl p-5 transition-transform hover:-translate-y-0.5"
+          className="bg-surface-card border border-line rounded-2xl p-5 transition-[color,background-color,border-color,transform] duration-300 hover:-translate-y-0.5"
         >
           <div className="font-mono text-[10px] tracking-[0.12em] text-subtle mb-3">
             {k.label}

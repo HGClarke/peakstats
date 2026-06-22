@@ -3,7 +3,7 @@ import type { DashRide } from "@/types/overview";
 /** Recent rides list shown on the Overview, mirroring the dashboard design. */
 export function RecentRidesPanel({ rides }: { rides: DashRide[] }) {
   return (
-    <div className="bg-surface-card border border-line rounded-2xl p-2 pb-1">
+    <div className="bg-surface-card border border-line rounded-2xl p-2 pb-1 transition-colors duration-300">
       <div className="flex items-center justify-between px-[14px] pt-3 pb-[10px]">
         <span className="font-display font-medium text-[15px] text-ink">Recent rides</span>
         <span className="font-mono text-[11px] text-faint">LAST {rides.length}</span>

@@ -119,3 +119,26 @@ def delete_activity(client: Client, athlete_id: int, activity_id: int) -> None:
     client.table("activities").delete().eq("id", activity_id).eq(
         "athlete_id", athlete_id
     ).execute()
+
+
+def list_activities_needing_detail(
+    client: Client, athlete_id: int, limit: int
+) -> list[ActivityRow]:
+    resp = (
+        client.table("activities")
+        .select("*")
+        .eq("athlete_id", athlete_id)
+        .is_("detail_fetched_at", "null")
+        .order("start_date", desc=False)
+        .limit(limit)
+        .execute()
+    )
+    return cast(list[ActivityRow], resp.data)
+
+
+def mark_detail_fetched(
+    client: Client, activity_id: int, splits_metric: Any, fetched_at: str
+) -> None:
+    client.table("activities").update(
+        {"splits_metric": splits_metric, "detail_fetched_at": fetched_at}
+    ).eq("id", activity_id).execute()

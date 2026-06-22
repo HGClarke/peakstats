@@ -56,22 +56,22 @@ export default function SyncPage() {
       <div className="absolute inset-0 p-7 blur-[1.5px] opacity-60 pointer-events-none">
         <div className="grid grid-cols-4 gap-4 mb-[18px]">
           {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="bg-surface-card border border-line rounded-2xl p-5">
+            <div key={i} className="bg-surface-card border border-line rounded-2xl p-5 transition-colors duration-300">
               <div className="h-[9px] w-[54px] rounded bg-skel mb-4 animate-pkskel" />
               <div className="h-[26px] w-[88px] rounded bg-skel mb-[14px] animate-pkskel" />
               <div className="h-4 w-[46px] rounded-full bg-skel animate-pkskel" />
             </div>
           ))}
         </div>
-        <div className="bg-surface-card border border-line rounded-2xl p-5 mb-[18px]">
+        <div className="bg-surface-card border border-line rounded-2xl p-5 mb-[18px] transition-colors duration-300">
           <div className="h-[11px] w-[150px] rounded bg-skel mb-5 animate-pkskel" />
           <div className="h-[180px] rounded-[10px] bg-skel animate-pkskel" />
         </div>
       </div>
 
       {/* overlay card */}
-      <div className="absolute inset-0 bg-overlay flex items-center justify-center p-6">
-        <div className="w-[480px] max-w-full bg-surface-card border border-line-strong rounded-[20px] p-[32px_32px_30px] shadow-[0_30px_80px_rgba(0,0,0,0.45)]">
+      <div className="absolute inset-0 bg-overlay flex items-center justify-center p-6 transition-colors duration-300">
+        <div className="w-[480px] max-w-full bg-surface-card border border-line-strong rounded-[20px] p-[32px_32px_30px] shadow-[0_30px_80px_rgba(0,0,0,0.45)] transition-colors duration-300">
           <div className="flex items-center gap-[11px] mb-6">
             <div className="w-[30px] h-[30px] rounded-[8px] bg-strava flex items-center justify-center flex-none">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff" aria-hidden>

@@ -6,13 +6,13 @@ import { useSyncStatus } from "@/api/sync";
 import { AppShell } from "@/components/app-shell/AppShell";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import type { SortField } from "@/types/activities";
+import { Pager } from "@/components/Pager";
 import { ActivityFilterBar } from "./components/ActivityFilterBar";
-import { ActivityPager } from "./components/ActivityPager";
 import { ActivityTable } from "./components/ActivityTable";
 
 function SkeletonRows() {
   return (
-    <div className="bg-surface-card border border-line rounded-2xl p-2" role="status"
+    <div className="bg-surface-card border border-line rounded-2xl p-2 transition-colors duration-300" role="status"
       aria-label="Loading activities">
       {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
         <div key={i} className="px-[18px] py-[15px]">
@@ -118,12 +118,13 @@ export default function ActivitiesPage() {
               rows={rows} sort={sort} direction={direction}
               onSort={handleSort} emptyMessage={emptyMessage}
             />
-            <ActivityPager
+            <Pager
               page={data?.page ?? 1}
               totalPages={data?.total_pages ?? 1}
               total={total}
               pageSize={data?.page_size ?? 9}
               onPage={setPage}
+              noun="activities"
             />
           </>
         )}

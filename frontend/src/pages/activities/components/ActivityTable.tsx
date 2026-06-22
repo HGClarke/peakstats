@@ -21,7 +21,7 @@ const grid = "grid grid-cols-[1.7fr_1fr_1fr_1fr_1fr_36px] gap-3 items-center";
 
 export function ActivityTable({ rows, sort, direction, onSort, emptyMessage }: Props) {
   return (
-    <div className="bg-surface-card border border-line rounded-2xl p-2">
+    <div className="bg-surface-card border border-line rounded-2xl p-2 transition-colors duration-300">
       <div className={`${grid} px-[18px] py-[14px] font-mono text-[10px] tracking-[0.1em] text-faint border-b border-line-subtle`}>
         {COLUMNS.map(({ label, field }) =>
           field ? (

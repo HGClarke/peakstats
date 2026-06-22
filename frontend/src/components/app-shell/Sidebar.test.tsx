@@ -24,7 +24,9 @@ describe("Sidebar", () => {
       .toHaveAttribute("href", "/activities");
     expect(screen.getByRole("link", { name: /overview/i }))
       .toHaveAttribute("href", "/home");
-    expect(screen.queryByRole("link", { name: /segments/i })).toBeNull();
+    expect(screen.getByRole("link", { name: /segments/i }))
+      .toHaveAttribute("href", "/segments");
+    expect(screen.queryByRole("link", { name: /goals/i })).toBeNull();
   });
 });
 

@@ -247,3 +247,69 @@ def test_to_activity_row_start_date_local_missing_is_none():
         "moving_time": 10, "elapsed_time": 10, "total_elevation_gain": 0.0,
     })
     assert row["start_date_local"] is None
+
+
+def test_run_detail_backfill_fetches_stores_and_marks(monkeypatch):
+    fetched, stored, marked = [], [], []
+
+    class FakeStrava:
+        def get_activity(self, access_token, activity_id):
+            fetched.append(activity_id)
+            return {"id": activity_id, "splits_metric": [{"x": 1}], "segment_efforts": []}
+
+        def close(self):
+            pass
+
+    pending = [[{"id": 1}, {"id": 2}], []]  # one batch, then empty -> stop
+    monkeypatch.setattr(sync_service, "build_strava", lambda settings: FakeStrava())
+    monkeypatch.setattr(sync_service, "get_valid_access_token",
+                        lambda supabase, strava, athlete_id: "AT")
+    monkeypatch.setattr(sync_service.activities_db, "list_activities_needing_detail",
+                        lambda supabase, athlete_id, limit: pending.pop(0))
+    monkeypatch.setattr(sync_service.segments_service, "store_activity_efforts",
+                        lambda supabase, athlete_id, detail: stored.append(detail["id"]))
+    monkeypatch.setattr(
+        sync_service.activities_db, "mark_detail_fetched",
+        lambda supabase, activity_id, splits_metric, fetched_at: marked.append(activity_id),
+    )
+    monkeypatch.setattr(sync_service.time, "sleep", lambda s: None)
+
+    sync_service.run_detail_backfill(FakeSupabase(), settings=object(), athlete_id=7)
+    assert fetched == [1, 2]
+    assert stored == [1, 2]
+    assert marked == [1, 2]
+
+
+def test_run_detail_backfill_backs_off_on_429(monkeypatch):
+    import httpx
+
+    calls = {"n": 0}
+    slept = []
+
+    class FakeStrava:
+        def get_activity(self, access_token, activity_id):
+            calls["n"] += 1
+            if calls["n"] == 1:
+                raise httpx.HTTPStatusError(
+                    "429", request=httpx.Request("GET", "http://x"),
+                    response=httpx.Response(429, headers={"Retry-After": "2"}))
+            return {"id": activity_id, "splits_metric": None, "segment_efforts": []}
+
+        def close(self):
+            pass
+
+    pending = [[{"id": 1}], []]
+    monkeypatch.setattr(sync_service, "build_strava", lambda settings: FakeStrava())
+    monkeypatch.setattr(sync_service, "get_valid_access_token",
+                        lambda supabase, strava, athlete_id: "AT")
+    monkeypatch.setattr(sync_service.activities_db, "list_activities_needing_detail",
+                        lambda supabase, athlete_id, limit: pending.pop(0))
+    monkeypatch.setattr(sync_service.segments_service, "store_activity_efforts",
+                        lambda supabase, athlete_id, detail: None)
+    monkeypatch.setattr(sync_service.activities_db, "mark_detail_fetched",
+                        lambda supabase, activity_id, splits_metric, fetched_at: None)
+    monkeypatch.setattr(sync_service.time, "sleep", lambda s: slept.append(s))
+
+    sync_service.run_detail_backfill(FakeSupabase(), settings=object(), athlete_id=7)
+    assert calls["n"] == 2          # retried after the 429
+    assert 2 in slept               # honoured Retry-After

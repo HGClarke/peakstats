@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import { Menu } from "lucide-react";
+import { ArrowLeft, Menu } from "lucide-react";
+import { Link } from "react-router";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 export function Topbar({
@@ -8,15 +9,17 @@ export function Topbar({
   right,
   onMenuClick,
   menuOpen,
+  backTo,
 }: {
   title: string;
   subtitle?: string;
   right?: ReactNode;
   onMenuClick?: () => void;
   menuOpen?: boolean;
+  backTo?: string;
 }) {
   return (
-    <div className="h-[70px] flex-none border-b border-line2 flex items-center justify-between px-8">
+    <div className="h-[70px] flex-none border-b border-line2 flex items-center justify-between px-8 transition-colors duration-300">
       <div className="flex items-center gap-[14px]">
         {onMenuClick ? (
           <button
@@ -29,6 +32,15 @@ export function Topbar({
           >
             <Menu size={18} aria-hidden />
           </button>
+        ) : null}
+        {backTo ? (
+          <Link
+            to={backTo}
+            aria-label="Back"
+            className="w-[34px] h-[34px] rounded-[9px] border border-line-strong text-body flex items-center justify-center hover:text-ink"
+          >
+            <ArrowLeft size={17} aria-hidden />
+          </Link>
         ) : null}
         <h1 className="font-display font-semibold text-[22px] m-0 tracking-[-0.01em] text-ink">
           {title}

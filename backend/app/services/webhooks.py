@@ -1,4 +1,5 @@
 import logging
+from datetime import UTC, datetime
 
 from supabase import Client
 
@@ -8,6 +9,7 @@ from app.db import activities as activities_db
 from app.db import athletes as athletes_db
 from app.db import sync_state as sync_state_db
 from app.models.webhooks import StravaWebhookEvent
+from app.services import segments as segments_service
 from app.services import sync as sync_service
 from app.services.tokens import get_valid_access_token
 
@@ -47,6 +49,11 @@ def process_event(
             detail = strava.get_activity(access_token, event.object_id)
             row = sync_service._to_activity_row(event.owner_id, detail)
             activities_db.upsert_activities(supabase, [row])  # type: ignore[list-item]
+            segments_service.store_activity_efforts(supabase, event.owner_id, detail)
+            activities_db.mark_detail_fetched(
+                supabase, detail["id"], detail.get("splits_metric"),
+                datetime.now(UTC).isoformat(),
+            )
 
         sync_state_db.upsert_sync_state(
             supabase, event.owner_id, {"last_webhook_event_id": event.event_time}

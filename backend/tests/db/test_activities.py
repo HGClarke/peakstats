@@ -133,3 +133,25 @@ def test_delete_activity_scopes_by_athlete_and_id():
     params = route.calls.last.request.url.params
     assert params["id"] == "eq.123"
     assert params["athlete_id"] == "eq.7"
+
+
+@respx.mock
+def test_list_activities_needing_detail_filters_null():
+    route = respx.route(method="GET", path="/rest/v1/activities").mock(
+        return_value=Response(200, json=[{"id": 3, "athlete_id": 7, "name": "Ride"}])
+    )
+    rows = activities.list_activities_needing_detail(CLIENT, 7, limit=50)
+    params = route.calls.last.request.url.params
+    assert params["athlete_id"] == "eq.7"
+    assert params["detail_fetched_at"] == "is.null"
+    assert params["limit"] == "50"
+    assert rows == [{"id": 3, "athlete_id": 7, "name": "Ride"}]
+
+
+@respx.mock
+def test_mark_detail_fetched_updates_row():
+    route = respx.route(method="PATCH", path="/rest/v1/activities").mock(return_value=Response(204))
+    activities.mark_detail_fetched(CLIENT, 3, [{"distance": 1000}], "2026-06-21T12:00:00+00:00")
+    req = route.calls.last.request
+    assert req.url.params["id"] == "eq.3"
+    assert b"detail_fetched_at" in req.content

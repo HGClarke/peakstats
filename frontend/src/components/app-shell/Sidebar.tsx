@@ -6,7 +6,7 @@ import type { Athlete } from "@/types/athlete";
 const NAV_ITEMS: { label: string; to?: string }[] = [
   { label: "Overview", to: "/home" },
   { label: "Activities", to: "/activities" },
-  { label: "Segments" },
+  { label: "Segments", to: "/segments" },
   { label: "Goals" },
 ];
 
