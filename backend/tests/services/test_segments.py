@@ -1,3 +1,4 @@
+from app.models.segments import SegmentListResponse
 from app.services import segments as svc
 
 
@@ -86,3 +87,54 @@ def test_store_activity_efforts_noop_when_none(monkeypatch):  # noqa: ANN001
 
     monkeypatch.setattr(svc.segments_db, "upsert_segment_efforts", fail)
     svc.store_activity_efforts(object(), 7, {"id": 1, "segment_efforts": []})
+
+
+
+
+def test_summarize_segment_new_pr_with_improvement():
+    efforts = [
+        {"id": 1, "elapsed_time_s": 130, "start_date": "2026-06-10T08:00:00Z"},
+        {"id": 2, "elapsed_time_s": 118, "start_date": "2026-06-21T08:00:00Z"},  # latest = fastest
+    ]
+    item = svc.summarize_segment(5, "Hill", 1200.0, 4.8, efforts)
+    assert item.best_time_s == 118
+    assert item.attempts == 2
+    assert item.pr is True
+    assert item.latest_rank == 1
+    assert item.improvement_s == 12          # 130 - 118
+
+
+def test_summarize_segment_nth_best_when_latest_slower():
+    efforts = [
+        {"id": 1, "elapsed_time_s": 118, "start_date": "2026-06-10T08:00:00Z"},
+        {"id": 2, "elapsed_time_s": 130, "start_date": "2026-06-21T08:00:00Z"},  # latest = slowest
+    ]
+    item = svc.summarize_segment(5, "Hill", 1200.0, 4.8, efforts)
+    assert item.pr is False
+    assert item.latest_rank == 2
+    assert item.improvement_s is None
+
+
+def test_summarize_segment_single_effort_is_pr_without_improvement():
+    effort = [{"id": 1, "elapsed_time_s": 118, "start_date": "2026-06-10T08:00:00Z"}]
+    item = svc.summarize_segment(5, "Hill", 1200.0, 4.8, effort)
+    assert item.pr is True and item.latest_rank == 1 and item.improvement_s is None
+
+
+def test_list_segments_groups_filters_and_sorts(monkeypatch):
+    rows = [
+        {"segment_id": 5, "elapsed_time_s": 118, "start_date": "2026-06-21T08:00:00Z",
+         "segments": {"name": "Hill", "distance_m": 1200.0, "avg_grade": 4.8}},
+        {"segment_id": 5, "elapsed_time_s": 130, "start_date": "2026-06-10T08:00:00Z",
+         "segments": {"name": "Hill", "distance_m": 1200.0, "avg_grade": 4.8}},
+        {"segment_id": 9, "elapsed_time_s": 200, "start_date": "2026-06-20T08:00:00Z",
+         "segments": {"name": "Flat", "distance_m": 3000.0, "avg_grade": 0.3}},
+    ]
+    monkeypatch.setattr(svc.segments_db, "list_athlete_efforts", lambda supabase, a: rows)
+    resp = svc.list_segments(object(), 7, q=None, sort="attempts", direction="desc")
+    assert isinstance(resp, SegmentListResponse)
+    assert [s.name for s in resp.segments] == ["Hill", "Flat"]   # 2 attempts before 1
+    assert resp.segments[0].attempts == 2
+
+    resp_q = svc.list_segments(object(), 7, q="fla", sort="attempts", direction="desc")
+    assert [s.name for s in resp_q.segments] == ["Flat"]

@@ -2,6 +2,12 @@ from supabase import Client
 
 from app.db import segments as segments_db
 from app.db.segments import SegmentEffortRow, SegmentRow
+from app.models.segments import (
+    SegmentListItem,
+    SegmentListResponse,
+    SegmentSortDir,
+    SegmentSortField,
+)
 
 
 def extract_efforts(
@@ -61,3 +67,46 @@ def store_activity_efforts(supabase: Client, athlete_id: int, detail: dict) -> N
     segments_db.upsert_segment_efforts(supabase, efforts)
     for segment_id in {e["segment_id"] for e in efforts}:
         recompute_is_best(supabase, athlete_id, segment_id)
+
+
+def summarize_segment(
+    segment_id: int, name: str, distance_m: float, avg_grade: float, efforts: list[dict]
+) -> SegmentListItem:
+    times = sorted(e["elapsed_time_s"] for e in efforts)
+    best_time = times[0]
+    latest = max(efforts, key=lambda e: e["start_date"])
+    ordered = sorted(efforts, key=lambda e: (e["elapsed_time_s"], e["start_date"]))
+    latest_rank = next(i for i, e in enumerate(ordered, 1) if e is latest)
+    pr = latest_rank == 1
+    improvement = times[1] - times[0] if pr and len(times) >= 2 else None
+    return SegmentListItem(
+        id=segment_id, name=name, distance_m=distance_m, avg_grade=avg_grade,
+        best_time_s=best_time, attempts=len(efforts), pr=pr,
+        latest_rank=latest_rank, improvement_s=improvement,
+    )
+
+
+def list_segments(
+    supabase: Client, athlete_id: int, *,
+    q: str | None, sort: SegmentSortField, direction: SegmentSortDir,
+) -> SegmentListResponse:
+    rows = segments_db.list_athlete_efforts(supabase, athlete_id)
+    grouped: dict[int, list[dict]] = {}
+    meta: dict[int, dict] = {}
+    for r in rows:
+        seg = r.get("segments") or {}
+        grouped.setdefault(r["segment_id"], []).append(r)
+        meta[r["segment_id"]] = seg
+    items = [
+        summarize_segment(
+            sid, meta[sid].get("name") or "Segment",
+            meta[sid].get("distance_m", 0.0), meta[sid].get("avg_grade", 0.0), efforts,
+        )
+        for sid, efforts in grouped.items()
+    ]
+    if q:
+        needle = q.lower()
+        items = [s for s in items if needle in s.name.lower()]
+    items.sort(key=lambda s: s.name)                       # stable secondary order
+    items.sort(key=lambda s: s.attempts, reverse=direction == "desc")
+    return SegmentListResponse(segments=items)
