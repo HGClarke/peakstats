@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { useAthlete } from "@/api/auth";
 import { patchSettings } from "@/api/settings";
@@ -62,4 +62,21 @@ it("toggleTheme flips the dark class and mirrors to localStorage", async () => {
   expect(document.documentElement.classList.contains("dark")).toBe(false);
   expect(localStorage.getItem("peakstats-theme")).toBe("light");
   await waitFor(() => expect(patchSettings).toHaveBeenCalledWith({ theme: "light" }));
+});
+
+it("after a failed PATCH with no prior override, clears override so subsequent server value is reflected", async () => {
+  (patchSettings as unknown as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error("nope"));
+  const { rerender } = render(<SettingsProvider><Probe /></SettingsProvider>);
+
+  // Optimistically set imperial; PATCH fails; should revert to server metric
+  fireEvent.click(screen.getByText("imperial"));
+  await waitFor(() => expect(screen.getByTestId("units")).toHaveTextContent("metric"));
+
+  // Now server returns imperial — override must be null so the new value shows
+  mockAthlete({ units: "imperial", theme: "dark", default_period: "week" });
+  (patchSettings as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({});
+  await act(async () => {
+    rerender(<SettingsProvider><Probe /></SettingsProvider>);
+  });
+  await waitFor(() => expect(screen.getByTestId("units")).toHaveTextContent("imperial"));
 });

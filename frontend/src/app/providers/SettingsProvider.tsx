@@ -40,13 +40,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [theme]);
 
   const setUnits = (next: Units) => {
-    const prev = localUnits ?? serverUnits;
+    const prev = localUnits;
     setLocalUnits(next);
     patchSettings({ units: next }).catch(() => setLocalUnits(prev));
   };
 
   const setTheme = (next: Theme) => {
-    const prev = localTheme ?? serverTheme;
+    const prev = localTheme;
     setLocalTheme(next);
     patchSettings({ theme: next }).catch(() => setLocalTheme(prev));
   };
