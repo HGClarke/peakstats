@@ -1,3 +1,6 @@
+export interface ZoneBucketDTO { z: string; name: string; range: string; seconds: number; pct: number }
+export interface ZonesBlockDTO { unset: boolean; avg: number | null; buckets: ZoneBucketDTO[] }
+
 export interface ActivityDetailDTO {
   id: number;
   name: string;
@@ -14,6 +17,8 @@ export interface ActivityDetailDTO {
   work_kj: number | null;
   avg_hr: number | null;
   summary_polyline: string | null;
+  power_zones: ZonesBlockDTO;
+  hr_zones: ZonesBlockDTO;
 }
 
 export interface ActivityStreamsDTO {

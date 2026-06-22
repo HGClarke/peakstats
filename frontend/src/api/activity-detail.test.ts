@@ -7,7 +7,10 @@ const d = (o: Partial<ActivityDetailDTO> = {}): ActivityDetailDTO => ({
   start_date: "2026-06-21T14:42:00Z", start_date_local: "2026-06-21T07:42:00",
   location: null, distance_m: 84300, moving_time_s: 11820, elev_gain_m: 1284,
   avg_speed_ms: 7.13, avg_power_w: 198, normalized_power_w: 221, work_kj: 2342,
-  avg_hr: 148, summary_polyline: "abc", ...o,
+  avg_hr: 148, summary_polyline: "abc",
+  power_zones: { unset: true, avg: null, buckets: [] },
+  hr_zones: { unset: true, avg: null, buckets: [] },
+  ...o,
 });
 
 describe("toPrimaryStats", () => {
@@ -58,5 +61,22 @@ describe("toChartPoints", () => {
 describe("xAxisLabels", () => {
   it("returns 5 quarter labels", () => {
     expect(xAxisLabels(84300, "metric")).toEqual(["0.0", "21.1", "42.1", "63.2", "84.3"]); // 42.15 → "42.1" (IEEE754 toFixed)
+  });
+});
+
+import { toZoneRows } from "./activity-detail";
+
+describe("toZoneRows", () => {
+  it("colors by index and scales bars to the max bucket", () => {
+    const rows = toZoneRows({ unset: false, avg: 150, buckets: [
+      { z: "Z1", name: "Active Rec.", range: "< 154 W", seconds: 600, pct: 20 },
+      { z: "Z2", name: "Endurance", range: "154–210 W", seconds: 1200, pct: 40 },
+    ]});
+    expect(rows[0].color).toBe("var(--color-zone-1)");
+    expect(rows[1].color).toBe("var(--color-zone-2)");
+    expect(rows[0].barW).toBe("50.0%");   // 20/40*100
+    expect(rows[1].barW).toBe("100.0%");
+    expect(rows[0].pctLabel).toBe("20%");
+    expect(rows[0].dur).toBe("10m");      // 600s
   });
 });

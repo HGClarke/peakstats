@@ -19,6 +19,8 @@ const detail: ActivityDetailDTO = {
   location: "Marin Headlands", distance_m: 84300, moving_time_s: 11820, elev_gain_m: 1284,
   avg_speed_ms: 7.13, avg_power_w: 198, normalized_power_w: 221, work_kj: 2342,
   avg_hr: 148, summary_polyline: "_p~iF~ps|U_ulLnnqC_mqNvxq`@",
+  power_zones: { unset: true, avg: null, buckets: [] },
+  hr_zones: { unset: true, avg: null, buckets: [] },
 };
 
 describe("RouteHero", () => {

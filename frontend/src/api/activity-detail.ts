@@ -92,3 +92,24 @@ export function xAxisLabels(distanceMeters: number, units: Units): string[] {
     (f) => fmtDistance(distanceMeters * f, units).value,
   );
 }
+
+import type { ZonesBlockDTO } from "@/types/activity-detail";
+
+export interface ZoneRowVM {
+  z: string; name: string; range: string; color: string;
+  barW: string; dur: string; pctLabel: string;
+}
+
+export function zoneColor(index: number): string {
+  return `var(--color-zone-${Math.min(index + 1, 7)})`;
+}
+
+export function toZoneRows(block: ZonesBlockDTO): ZoneRowVM[] {
+  const maxPct = Math.max(1, ...block.buckets.map((b) => b.pct));
+  return block.buckets.map((b, i) => ({
+    z: b.z, name: b.name, range: b.range, color: zoneColor(i),
+    barW: `${((b.pct / maxPct) * 100).toFixed(1)}%`,
+    dur: fmtDuration(b.seconds),
+    pctLabel: `${Math.round(b.pct)}%`,
+  }));
+}
