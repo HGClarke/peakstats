@@ -64,4 +64,26 @@ describe("MobileNav", () => {
     renderNav(true);
     expect(screen.getByRole("button", { name: /close navigation/i })).toHaveFocus();
   });
+
+  it("restores focus to the previously focused element when closed", () => {
+    function Harness({ open }: { open: boolean }) {
+      return (
+        <MemoryRouter>
+          <button type="button">menu</button>
+          <MobileNav open={open} onClose={() => {}} navActive="Overview"
+            athlete={athlete} syncLabel="Up to date" onLogout={() => {}} />
+        </MemoryRouter>
+      );
+    }
+    const { rerender } = render(<Harness open={false} />);
+    const trigger = screen.getByRole("button", { name: "menu" });
+    trigger.focus();
+    expect(trigger).toHaveFocus();
+
+    rerender(<Harness open={true} />);
+    expect(screen.getByRole("button", { name: /close navigation/i })).toHaveFocus();
+
+    rerender(<Harness open={false} />);
+    expect(trigger).toHaveFocus();
+  });
 });
