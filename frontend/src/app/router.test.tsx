@@ -30,3 +30,9 @@ it("the not-found page links back home", async () => {
   const home = await screen.findByRole("link", { name: /back to home/i });
   expect(home).toHaveAttribute("href", "/");
 });
+
+it("renders the activity detail page at /activities/:id", async () => {
+  renderAt("/activities/5");
+  // Should mount ActivityDetailPage, not NotFoundPage
+  expect(screen.queryByText(/page not found/i)).not.toBeInTheDocument();
+});

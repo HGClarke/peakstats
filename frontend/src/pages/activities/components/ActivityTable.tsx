@@ -1,4 +1,5 @@
 import { ArrowDown, ArrowUp, ChevronRight } from "lucide-react";
+import { Link } from "react-router";
 import type { ActivityRowVM, SortDir, SortField } from "@/types/activities";
 
 interface Props {
@@ -46,7 +47,11 @@ export function ActivityTable({ rows, sort, direction, onSort, emptyMessage }: P
       </div>
 
       {rows.map((r) => (
-        <div key={r.id} className={`${grid} px-[18px] py-[15px] rounded-[11px]`}>
+        <Link
+          key={r.id}
+          to={`/activities/${r.id}`}
+          className={`${grid} px-[18px] py-[15px] rounded-[11px] hover:bg-surface-inset transition-colors`}
+        >
           <div className="flex items-center gap-[13px] min-w-0">
             <span className="w-[9px] h-[9px] rounded-full bg-strava flex-none" />
             <div className="min-w-0">
@@ -59,7 +64,7 @@ export function ActivityTable({ rows, sort, direction, onSort, emptyMessage }: P
           <span className="font-mono text-[13px] text-body">{r.elevLabel}</span>
           <span className="font-mono text-[13px] text-body">{r.speedLabel}</span>
           <ChevronRight size={16} className="text-faint justify-self-end" aria-hidden />
-        </div>
+        </Link>
       ))}
 
       {emptyMessage && (
