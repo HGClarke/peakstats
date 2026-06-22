@@ -1,4 +1,5 @@
-from app.models.segments import SegmentListResponse
+import pytest
+from app.models.segments import SegmentDetailResponse, SegmentListResponse
 from app.services import segments as svc
 
 
@@ -138,3 +139,42 @@ def test_list_segments_groups_filters_and_sorts(monkeypatch):
 
     resp_q = svc.list_segments(object(), 7, q="fla", sort="attempts", direction="desc")
     assert [s.name for s in resp_q.segments] == ["Flat"]
+
+
+def _detail_efforts():
+    return [
+        {"id": 10, "activity_id": 2, "start_date": "2026-06-21T08:00:00Z",
+         "elapsed_time_s": 118, "avg_watts": None, "avg_hr": None, "avg_speed_ms": 10.2,
+         "is_best": True, "activities": {"name": "River loop"}},
+        {"id": 9, "activity_id": 1, "start_date": "2026-06-10T08:00:00Z",
+         "elapsed_time_s": 130, "avg_watts": 240.0, "avg_hr": 158, "avg_speed_ms": 9.2,
+         "is_best": False, "activities": {"name": "Hill repeats"}},
+    ]
+
+
+def test_get_segment_builds_detail(monkeypatch):
+    seg = {"id": 5, "name": "Hill", "distance_m": 1200.0, "avg_grade": 4.8}
+    monkeypatch.setattr(svc.segments_db, "get_segment", lambda supabase, sid: seg)
+    monkeypatch.setattr(svc.segments_db, "list_segment_efforts",
+                        lambda supabase, a, sid: _detail_efforts())
+    resp = svc.get_segment(object(), 7, 5)
+    assert isinstance(resp, SegmentDetailResponse)
+    assert resp.pr_time_s == 118
+    assert resp.attempts == 2
+    assert resp.efforts[0].activity_name == "River loop"
+    assert resp.efforts[1].avg_hr == 158
+
+
+def test_get_segment_404_when_segment_missing(monkeypatch):
+    monkeypatch.setattr(svc.segments_db, "get_segment", lambda supabase, sid: None)
+    monkeypatch.setattr(svc.segments_db, "list_segment_efforts", lambda supabase, a, sid: [])
+    with pytest.raises(svc.SegmentNotFoundError):
+        svc.get_segment(object(), 7, 5)
+
+
+def test_get_segment_404_when_no_efforts_for_athlete(monkeypatch):
+    seg = {"id": 5, "name": "Hill", "distance_m": 1200.0, "avg_grade": 4.8}
+    monkeypatch.setattr(svc.segments_db, "get_segment", lambda supabase, sid: seg)
+    monkeypatch.setattr(svc.segments_db, "list_segment_efforts", lambda supabase, a, sid: [])
+    with pytest.raises(svc.SegmentNotFoundError):
+        svc.get_segment(object(), 7, 5)

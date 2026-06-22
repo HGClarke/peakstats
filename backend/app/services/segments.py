@@ -3,6 +3,8 @@ from supabase import Client
 from app.db import segments as segments_db
 from app.db.segments import SegmentEffortRow, SegmentRow
 from app.models.segments import (
+    SegmentDetailResponse,
+    SegmentEffortItem,
     SegmentListItem,
     SegmentListResponse,
     SegmentSortDir,
@@ -83,6 +85,34 @@ def summarize_segment(
         id=segment_id, name=name, distance_m=distance_m, avg_grade=avg_grade,
         best_time_s=best_time, attempts=len(efforts), pr=pr,
         latest_rank=latest_rank, improvement_s=improvement,
+    )
+
+
+class SegmentNotFoundError(Exception):
+    """Raised when a segment has no efforts for the requesting athlete."""
+
+
+def get_segment(
+    supabase: Client, athlete_id: int, segment_id: int
+) -> SegmentDetailResponse:
+    seg = segments_db.get_segment(supabase, segment_id)
+    efforts = segments_db.list_segment_efforts(supabase, athlete_id, segment_id)
+    if seg is None or not efforts:
+        raise SegmentNotFoundError(f"segment {segment_id} has no efforts for athlete")
+    items = [
+        SegmentEffortItem(
+            id=e["id"], activity_id=e["activity_id"],
+            activity_name=(e.get("activities") or {}).get("name") or "Activity",
+            start_date=e["start_date"], elapsed_time_s=e["elapsed_time_s"],
+            avg_watts=e.get("avg_watts"), avg_hr=e.get("avg_hr"),
+            avg_speed_ms=e.get("avg_speed_ms") or 0.0, is_best=e["is_best"],
+        )
+        for e in efforts
+    ]
+    pr_time = min(i.elapsed_time_s for i in items)
+    return SegmentDetailResponse(
+        id=seg["id"], name=seg["name"], distance_m=seg["distance_m"],
+        avg_grade=seg["avg_grade"], pr_time_s=pr_time, attempts=len(items), efforts=items,
     )
 
 
