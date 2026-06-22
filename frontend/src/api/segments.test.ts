@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { SegmentEffortDTO, SegmentListItemDTO } from "@/types/segments";
 import {
-  barWidth, compareDelta, gradeBadge, prepareAttempts, toEffortRow, toSegmentRow,
+  barWidth, buildSegmentsQuery, compareDelta, gradeBadge, prepareAttempts, toEffortRow,
+  toSegmentRow,
 } from "./segments";
 
 const seg = (over: Partial<SegmentListItemDTO> = {}): SegmentListItemDTO => ({
@@ -71,6 +72,28 @@ describe("barWidth", () => {
   it("returns a percentage of the max", () => {
     expect(barWidth(118, 236)).toBe("50.0%");
     expect(barWidth(0, 0)).toBe("0.0%");
+  });
+});
+
+describe("buildSegmentsQuery", () => {
+  it("includes page and as_of alongside q/sort/direction", () => {
+    const p = new URLSearchParams(
+      buildSegmentsQuery({ q: " river ", sort: "attempts", direction: "asc", page: 2,
+        asOf: "2026-06-21T12:00:00Z" }),
+    );
+    expect(p.get("q")).toBe("river");          // trimmed
+    expect(p.get("sort")).toBe("attempts");
+    expect(p.get("direction")).toBe("asc");
+    expect(p.get("page")).toBe("2");
+    expect(p.get("as_of")).toBe("2026-06-21T12:00:00Z");
+  });
+  it("omits q when blank and as_of when null", () => {
+    const p = new URLSearchParams(
+      buildSegmentsQuery({ q: "", sort: "attempts", direction: "desc", page: 1, asOf: null }),
+    );
+    expect(p.has("q")).toBe(false);
+    expect(p.has("as_of")).toBe(false);
+    expect(p.get("page")).toBe("1");
   });
 });
 

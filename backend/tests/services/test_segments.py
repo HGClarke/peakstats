@@ -1,3 +1,5 @@
+from datetime import UTC, datetime
+
 import pytest
 from app.models.segments import SegmentDetailResponse, SegmentListResponse
 from app.services import segments as svc
@@ -144,14 +146,56 @@ def test_list_segments_groups_filters_and_sorts(monkeypatch):
         {"segment_id": 9, "elapsed_time_s": 200, "start_date": "2026-06-20T08:00:00Z",
          "segments": {"name": "Flat", "distance_m": 3000.0, "avg_grade": 0.3}},
     ]
-    monkeypatch.setattr(svc.segments_db, "list_athlete_efforts", lambda supabase, a: rows)
-    resp = svc.list_segments(object(), 7, q=None, sort="attempts", direction="desc")
+    monkeypatch.setattr(svc.segments_db, "list_athlete_efforts",
+                        lambda supabase, a, as_of: rows)
+    resp = svc.list_segments(object(), 7, q=None, sort="attempts", direction="desc", page=1)
     assert isinstance(resp, SegmentListResponse)
     assert [s.name for s in resp.segments] == ["Hill", "Flat"]   # 2 attempts before 1
     assert resp.segments[0].attempts == 2
+    assert resp.total == 2
+    assert resp.total_pages == 1
 
-    resp_q = svc.list_segments(object(), 7, q="fla", sort="attempts", direction="desc")
+    resp_q = svc.list_segments(object(), 7, q="fla", sort="attempts", direction="desc", page=1)
     assert [s.name for s in resp_q.segments] == ["Flat"]
+    assert resp_q.total == 1
+
+
+def test_list_segments_paginates_the_aggregated_list(monkeypatch):
+    # 12 segments, segment N has N efforts → unique attempt counts for a stable sort
+    rows = [
+        {"segment_id": sid, "elapsed_time_s": 100, "start_date": "2026-06-20T08:00:00Z",
+         "segments": {"name": f"Seg {sid:02d}", "distance_m": 1000.0, "avg_grade": 1.0}}
+        for sid in range(1, 13) for _ in range(sid)
+    ]
+    monkeypatch.setattr(svc.segments_db, "list_athlete_efforts",
+                        lambda supabase, a, as_of: rows)
+
+    page1 = svc.list_segments(object(), 7, q=None, sort="attempts", direction="desc", page=1)
+    assert page1.total == 12
+    assert page1.page == 1
+    assert page1.page_size == svc.SEGMENT_PAGE_SIZE
+    assert page1.total_pages == 2
+    assert len(page1.segments) == svc.SEGMENT_PAGE_SIZE      # full first page (10)
+    assert page1.segments[0].attempts == 12                 # highest first (desc)
+
+    page2 = svc.list_segments(object(), 7, q=None, sort="attempts", direction="desc", page=2)
+    assert [s.attempts for s in page2.segments] == [2, 1]   # remainder only
+
+
+def test_list_segments_forwards_snapshot_and_echoes_as_of(monkeypatch):
+    captured = {}
+
+    def fake_efforts(supabase, a, as_of):  # noqa: ANN001, ANN202
+        captured["as_of"] = as_of
+        return []
+
+    monkeypatch.setattr(svc.segments_db, "list_athlete_efforts", fake_efforts)
+    snap = datetime(2026, 6, 22, 12, 0, 0, tzinfo=UTC)
+    resp = svc.list_segments(
+        object(), 7, q=None, sort="attempts", direction="desc", page=1, as_of=snap
+    )
+    assert captured["as_of"] == snap.isoformat()            # snapshot pushed to the db
+    assert resp.as_of == snap                               # and echoed back
 
 
 def _detail_efforts():

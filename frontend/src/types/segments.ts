@@ -16,6 +16,11 @@ export interface SegmentListItemDTO {
 
 export interface SegmentListDTO {
   segments: SegmentListItemDTO[];
+  page: number;
+  page_size: number;
+  total: number;
+  total_pages: number;
+  as_of: string;
 }
 
 export interface SegmentEffortDTO {

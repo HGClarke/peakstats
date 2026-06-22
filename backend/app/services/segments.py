@@ -1,3 +1,6 @@
+from datetime import UTC, datetime
+from math import ceil
+
 from supabase import Client
 
 from app.db import segments as segments_db
@@ -72,6 +75,7 @@ def store_activity_efforts(supabase: Client, athlete_id: int, detail: dict) -> N
 
 
 RECENT_TREND_LIMIT = 8
+SEGMENT_PAGE_SIZE = 10
 
 
 def summarize_segment(
@@ -125,8 +129,10 @@ def get_segment(
 def list_segments(
     supabase: Client, athlete_id: int, *,
     q: str | None, sort: SegmentSortField, direction: SegmentSortDir,
+    page: int, as_of: datetime | None = None,
 ) -> SegmentListResponse:
-    rows = segments_db.list_athlete_efforts(supabase, athlete_id)
+    snapshot = as_of or datetime.now(UTC)
+    rows = segments_db.list_athlete_efforts(supabase, athlete_id, snapshot.isoformat())
     grouped: dict[int, list[dict]] = {}
     meta: dict[int, dict] = {}
     for r in rows:
@@ -145,4 +151,13 @@ def list_segments(
         items = [s for s in items if needle in s.name.lower()]
     items.sort(key=lambda s: s.name)                       # stable secondary order
     items.sort(key=lambda s: s.attempts, reverse=direction == "desc")
-    return SegmentListResponse(segments=items)
+    total = len(items)
+    offset = (page - 1) * SEGMENT_PAGE_SIZE
+    return SegmentListResponse(
+        segments=items[offset:offset + SEGMENT_PAGE_SIZE],
+        page=page,
+        page_size=SEGMENT_PAGE_SIZE,
+        total=total,
+        total_pages=max(1, ceil(total / SEGMENT_PAGE_SIZE)),
+        as_of=snapshot,
+    )

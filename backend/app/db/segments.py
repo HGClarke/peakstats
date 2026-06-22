@@ -1,6 +1,10 @@
-from typing import Any, TypedDict, cast
+from typing import Any, NotRequired, TypedDict, cast
 
 from supabase import Client
+
+# PostgREST caps each response at its default max-rows; loop in pages of this
+# size until a short page returns so the athlete's full effort history is read.
+EFFORTS_PAGE_SIZE = 1000
 
 
 class SegmentRow(TypedDict):
@@ -21,6 +25,7 @@ class SegmentEffortRow(TypedDict):
     avg_speed_ms: float | None
     start_date: str
     is_best: bool
+    created_at: NotRequired[str]
 
 
 def upsert_segments(client: Client, rows: list[SegmentRow]) -> None:
@@ -57,17 +62,29 @@ def set_is_best(client: Client, athlete_id: int, segment_id: int, best_id: int) 
     client.table("segment_efforts").update({"is_best": True}).eq("id", best_id).execute()
 
 
-def list_athlete_efforts(client: Client, athlete_id: int) -> list[dict]:
-    resp = (
-        client.table("segment_efforts")
-        .select(
-            "id, segment_id, elapsed_time_s, start_date, "
-            "segments(name, distance_m, avg_grade)"
+def list_athlete_efforts(client: Client, athlete_id: int, as_of: str) -> list[dict]:
+    """All of an athlete's efforts ingested at/before ``as_of`` (the snapshot
+    boundary), embedding each segment's name/distance/grade. Pages past the
+    PostgREST max-rows cap so the list is never silently truncated."""
+    rows: list[dict] = []
+    start = 0
+    while True:
+        resp = (
+            client.table("segment_efforts")
+            .select(
+                "id, segment_id, elapsed_time_s, start_date, "
+                "segments(name, distance_m, avg_grade)"
+            )
+            .eq("athlete_id", athlete_id)
+            .lte("created_at", as_of)
+            .range(start, start + EFFORTS_PAGE_SIZE - 1)
+            .execute()
         )
-        .eq("athlete_id", athlete_id)
-        .execute()
-    )
-    return cast(list[dict], resp.data)
+        page = cast(list[dict], resp.data)
+        rows.extend(page)
+        if len(page) < EFFORTS_PAGE_SIZE:
+            return rows
+        start += EFFORTS_PAGE_SIZE
 
 
 def get_segment(client: Client, segment_id: int) -> SegmentRow | None:

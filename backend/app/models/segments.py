@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel
@@ -21,6 +22,11 @@ class SegmentListItem(BaseModel):
 
 class SegmentListResponse(BaseModel):
     segments: list[SegmentListItem]
+    page: int
+    page_size: int
+    total: int
+    total_pages: int
+    as_of: datetime
 
 
 class SegmentEffortItem(BaseModel):

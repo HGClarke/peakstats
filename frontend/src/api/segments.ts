@@ -99,6 +99,8 @@ export interface SegmentsQuery {
   q: string;
   sort: "attempts";
   direction: SortDir;
+  page: number;
+  asOf: string | null;
 }
 
 export function buildSegmentsQuery(query: SegmentsQuery): string {
@@ -107,6 +109,8 @@ export function buildSegmentsQuery(query: SegmentsQuery): string {
   if (q) p.set("q", q);
   p.set("sort", query.sort);
   p.set("direction", query.direction);
+  p.set("page", String(query.page));
+  if (query.asOf) p.set("as_of", query.asOf);
   return p.toString();
 }
 

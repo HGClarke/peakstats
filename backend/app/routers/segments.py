@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException
+from datetime import datetime
+
+from fastapi import APIRouter, Depends, HTTPException, Query
 from supabase import Client
 
 from app.deps import get_current_athlete_id, get_supabase
@@ -18,11 +20,13 @@ def list_segments(
     q: str | None = None,
     sort: SegmentSortField = "attempts",
     direction: SegmentSortDir = "desc",
+    page: int = Query(1, ge=1),
+    as_of: datetime | None = None,
     athlete_id: int = Depends(get_current_athlete_id),
     supabase: Client = Depends(get_supabase),
 ) -> SegmentListResponse:
     return segments_service.list_segments(
-        supabase, athlete_id, q=q, sort=sort, direction=direction
+        supabase, athlete_id, q=q, sort=sort, direction=direction, page=page, as_of=as_of
     )
 
 

@@ -81,11 +81,36 @@ def test_list_athlete_efforts_embeds_segment():
             ],
         )
     )
-    rows = segments.list_athlete_efforts(CLIENT, 7)
+    rows = segments.list_athlete_efforts(CLIENT, 7, "2026-06-22T00:00:00Z")
     params = route.calls.last.request.url.params
     assert params["athlete_id"] == "eq.7"
+    assert params["created_at"] == "lte.2026-06-22T00:00:00Z"   # snapshot boundary
     assert "segments(" in params["select"]
     assert rows[0]["segments"]["name"] == "Hill"
+
+
+@respx.mock
+def test_list_athlete_efforts_pages_past_the_1000_row_cap():
+    # PostgREST caps each response at max-rows, so the fetch must loop until a
+    # short page returns — otherwise the segment list is truncated (the bug
+    # where only ~150 of 577 segments showed).
+    full_page = [
+        {"id": i, "segment_id": 5, "elapsed_time_s": 100, "start_date": "T",
+         "segments": {"name": "Hill", "distance_m": 1200.0, "avg_grade": 4.8}}
+        for i in range(segments.EFFORTS_PAGE_SIZE)
+    ]
+    tail = [
+        {"id": 99999, "segment_id": 6, "elapsed_time_s": 110, "start_date": "T",
+         "segments": {"name": "Flat", "distance_m": 3000.0, "avg_grade": 0.3}}
+    ]
+    route = respx.route(method="GET", path="/rest/v1/segment_efforts").mock(
+        side_effect=[Response(200, json=full_page), Response(200, json=tail)]
+    )
+    rows = segments.list_athlete_efforts(CLIENT, 7, "2026-06-22T00:00:00Z")
+    assert route.call_count == 2                          # looped to a second page
+    assert len(rows) == segments.EFFORTS_PAGE_SIZE + 1    # both pages concatenated
+    assert route.calls[0].request.url.params["offset"] == "0"
+    assert route.calls[1].request.url.params["offset"] == str(segments.EFFORTS_PAGE_SIZE)
 
 
 @respx.mock

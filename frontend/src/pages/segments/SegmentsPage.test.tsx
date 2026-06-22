@@ -33,6 +33,7 @@ function dto(over: Partial<SegmentListDTO> = {}): SegmentListDTO {
     segments: [{ id: 5, name: "Riverside Sprint", distance_m: 1200, avg_grade: 1.2,
       best_time_s: 118, attempts: 8, pr: true, latest_rank: 1, improvement_s: 4,
       recent_times_s: [130, 125, 118] }],
+    page: 1, page_size: 10, total: 1, total_pages: 1, as_of: "2026-06-21T12:00:00Z",
     ...over,
   };
 }
@@ -76,5 +77,33 @@ describe("SegmentsPage", () => {
     useSegments.mockReturnValue({ data: dto({ segments: [] }), isLoading: false });
     renderPage();
     expect(screen.getByText("No segments match your search.")).toBeInTheDocument();
+  });
+
+  it("shows the total segment count in the subtitle", () => {
+    useSegments.mockReturnValue({ data: dto({ total: 25, total_pages: 3 }), isLoading: false });
+    renderPage();
+    expect(screen.getByText("25 SEGMENTS")).toBeInTheDocument();
+  });
+
+  it("requests the next page from the pager", () => {
+    useSegments.mockReturnValue({ data: dto({ total: 25, total_pages: 3 }), isLoading: false });
+    renderPage();
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    expect(lastQuery().page).toBe(2);
+  });
+
+  it("captures the snapshot from the first response and reuses it", async () => {
+    renderPage();
+    await waitFor(() => expect(useSegments.mock.calls[0][0]).toMatchObject({ asOf: null }));
+    await waitFor(() => expect(lastQuery().asOf).toBe("2026-06-21T12:00:00Z"));
+  });
+
+  it("resets to page 1 when the sort toggles", () => {
+    useSegments.mockReturnValue({ data: dto({ total: 25, total_pages: 3 }), isLoading: false });
+    renderPage();
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    expect(lastQuery().page).toBe(2);
+    fireEvent.click(screen.getByRole("button", { name: /attempts/i }));
+    expect(lastQuery().page).toBe(1);
   });
 });

@@ -2,9 +2,10 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { logout, useAthlete } from "@/api/auth";
-import { toSegmentRow, useSegments } from "@/api/segments";
+import { type SegmentsQuery, toSegmentRow, useSegments } from "@/api/segments";
 import { useSyncStatus } from "@/api/sync";
 import { AppShell } from "@/components/app-shell/AppShell";
+import { Pager } from "@/components/Pager";
 import { SearchInput } from "@/components/SearchInput";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import type { SortDir } from "@/types/segments";
@@ -17,9 +18,18 @@ export default function SegmentsPage() {
 
   const [q, setQ] = useState("");
   const [direction, setDirection] = useState<SortDir>("desc");
+  const [page, setPage] = useState(1);
+  const [asOf, setAsOf] = useState<string | null>(null);
   const dq = useDebouncedValue(q, 300);
 
-  const { data, isLoading } = useSegments({ q: dq, sort: "attempts", direction });
+  const query: SegmentsQuery = { q: dq, sort: "attempts", direction, page, asOf };
+  const { data, isLoading } = useSegments(query);
+
+  // Capture the snapshot from the first response (render-time state pattern, as
+  // in ActivitiesPage) so paging stays stable if a sync lands mid-browse.
+  if (data?.as_of && asOf === null) {
+    setAsOf(data.as_of);
+  }
 
   useEffect(() => {
     if (error) navigate("/", { replace: true });
@@ -29,8 +39,12 @@ export default function SegmentsPage() {
   }, [status, navigate]);
 
   const synced = status?.status === "idle";
+  const total = data?.total ?? 0;
   const rows = (data?.segments ?? []).map(toSegmentRow);
   const emptyMessage = rows.length > 0 ? null : "No segments match your search.";
+
+  const handleQ = (v: string) => { setQ(v); setPage(1); };
+  const handleSort = () => { setDirection((d) => (d === "asc" ? "desc" : "asc")); setPage(1); };
 
   const handleLogout = async () => { await logout(); navigate("/", { replace: true }); };
 
@@ -41,11 +55,11 @@ export default function SegmentsPage() {
       syncLabel={synced ? "Up to date" : "Syncing…"}
       onLogout={handleLogout}
       title="Segments"
-      subtitle={`${data?.segments.length ?? 0} SEGMENTS`}
+      subtitle={`${total} SEGMENTS`}
     >
       <div className="h-full overflow-y-auto p-7">
         <div className="mb-4 max-w-[360px]">
-          <SearchInput value={q} onChange={setQ} placeholder="Search segments…" ariaLabel="Search segments" />
+          <SearchInput value={q} onChange={handleQ} placeholder="Search segments…" ariaLabel="Search segments" />
         </div>
         {isLoading && !data ? (
           <div className="bg-surface-card border border-line rounded-2xl p-2" role="status" aria-label="Loading segments">
@@ -54,13 +68,23 @@ export default function SegmentsPage() {
             ))}
           </div>
         ) : (
-          <SegmentTable
-            rows={rows}
-            sortDir={direction}
-            onSortAttempts={() => setDirection((d) => (d === "asc" ? "desc" : "asc"))}
-            onOpen={(id) => navigate(`/segments/${id}`)}
-            emptyMessage={emptyMessage}
-          />
+          <>
+            <SegmentTable
+              rows={rows}
+              sortDir={direction}
+              onSortAttempts={handleSort}
+              onOpen={(id) => navigate(`/segments/${id}`)}
+              emptyMessage={emptyMessage}
+            />
+            <Pager
+              page={data?.page ?? 1}
+              totalPages={data?.total_pages ?? 1}
+              total={total}
+              pageSize={data?.page_size ?? 10}
+              onPage={setPage}
+              noun="segments"
+            />
+          </>
         )}
       </div>
     </AppShell>
