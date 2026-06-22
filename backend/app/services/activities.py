@@ -5,10 +5,12 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from supabase import Client
 
 from app.db import activities as activities_db
+from app.db import streams as streams_db
 from app.db.activities import ActivityRow
 from app.models.activities import (
     ActivityListItem,
     ActivityListResponse,
+    ActivityStreamsResponse,
     OverviewResponse,
     RecentRideItem,
     SortDir,
@@ -16,9 +18,12 @@ from app.models.activities import (
     WeekDay,
     WeekTotals,
 )
+from app.services.tokens import get_valid_access_token
+from app.strava import StravaClient
 
 RECENT_LIMIT = 5
 PAGE_SIZE = 9
+STREAM_KEYS = ["time", "distance", "altitude", "heartrate", "watts", "velocity_smooth"]
 
 _SORT_COLUMNS: dict[SortField, str] = {
     "date": "start_date",
@@ -159,4 +164,46 @@ def list_activities(
         total=total,
         total_pages=max(1, ceil(total / PAGE_SIZE)),
         as_of=snapshot,
+    )
+
+
+def ensure_streams(
+    supabase: Client,
+    strava: StravaClient,
+    athlete_id: int,
+    activity_id: int,
+) -> dict[str, list]:
+    """Return cached stream data for the activity, fetching from Strava on miss.
+
+    Stores a sentinel (empty data, point_count 0) when Strava has no streams, so
+    we never refetch. `data` is the flat object-of-arrays.
+    """
+    existing = streams_db.get_streams(supabase, activity_id)
+    if existing is not None:
+        return existing["data"]
+    token = get_valid_access_token(supabase, strava, athlete_id)
+    data = strava.get_activity_streams(token, activity_id, STREAM_KEYS)
+    point_count = len(data.get("time") or data.get("distance") or [])
+    streams_db.upsert_streams(supabase, {
+        "activity_id": activity_id, "athlete_id": athlete_id,
+        "data": data, "resolution": "high", "point_count": point_count,
+    })
+    return data
+
+
+def get_streams_payload(
+    supabase: Client,
+    strava: StravaClient,
+    athlete_id: int,
+    activity_id: int,
+) -> ActivityStreamsResponse:
+    data = ensure_streams(supabase, strava, athlete_id, activity_id)
+    return ActivityStreamsResponse(
+        point_count=len(data.get("time") or data.get("distance") or []),
+        time=data.get("time"),
+        distance=data.get("distance"),
+        altitude=data.get("altitude"),
+        watts=data.get("watts"),
+        heartrate=data.get("heartrate"),
+        velocity_smooth=data.get("velocity_smooth"),
     )

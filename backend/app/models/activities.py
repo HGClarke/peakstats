@@ -54,3 +54,13 @@ class ActivityListResponse(BaseModel):
     total: int
     total_pages: int
     as_of: datetime
+
+
+class ActivityStreamsResponse(BaseModel):
+    point_count: int
+    time: list[int] | None = None
+    distance: list[float] | None = None
+    altitude: list[float] | None = None
+    watts: list[float | None] | None = None
+    heartrate: list[int | None] | None = None
+    velocity_smooth: list[float] | None = None

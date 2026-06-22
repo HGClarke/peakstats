@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 from app.models.activities import (
     ActivityListItem,
     ActivityListResponse,
+    ActivityStreamsResponse,
     OverviewResponse,
     RecentRideItem,
     WeekDay,
@@ -102,3 +103,18 @@ def test_list_rejects_bad_sort(client):
 def test_list_rejects_bad_as_of(client):
     _auth(client)
     assert client.get("/activities?as_of=not-a-date").status_code == 422
+
+
+def test_streams_requires_session(client):
+    assert client.get("/activities/5/streams").status_code == 401
+
+
+def test_streams_returns_body(client, monkeypatch):
+    monkeypatch.setattr(activities_service, "get_streams_payload",
+        lambda supabase, strava, athlete_id, activity_id:
+            ActivityStreamsResponse(point_count=2, time=[0, 1], distance=[0.0, 5.0],
+                                    watts=[100, 200]))
+    _auth(client)
+    body = client.get("/activities/5/streams").json()
+    assert body["point_count"] == 2 and body["watts"] == [100, 200]
+    assert body["altitude"] is None
