@@ -63,3 +63,32 @@ export function useActivityStreams(id: number) {
     queryFn: () => fetchActivityStreams(id),
   });
 }
+
+export interface ChartPoint { x: number; y: number }
+
+export function toChartPoints(
+  distance: number[] | null,
+  series: (number | null)[] | null,
+  units: Units,
+  opts: { maxPoints?: number } = {},
+): ChartPoint[] {
+  if (!distance || !series) return [];
+  const max = opts.maxPoints ?? 320;
+  const n = Math.min(distance.length, series.length);
+  const stride = Math.max(1, Math.ceil(n / max));
+  const toX = (m: number) =>
+    units === "imperial" ? m / 1609.344 : m / 1000;
+  const out: ChartPoint[] = [];
+  for (let i = 0; i < n; i += stride) {
+    const y = series[i];
+    if (y === null || y === undefined) continue;
+    out.push({ x: Number(toX(distance[i]).toFixed(3)), y });
+  }
+  return out;
+}
+
+export function xAxisLabels(distanceMeters: number, units: Units): string[] {
+  return [0, 0.25, 0.5, 0.75, 1].map(
+    (f) => fmtDistance(distanceMeters * f, units).value,
+  );
+}

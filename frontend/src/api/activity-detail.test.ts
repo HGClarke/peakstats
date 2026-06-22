@@ -36,3 +36,27 @@ describe("metaLabel", () => {
     expect(metaLabel(d())).toBe("Sun · Jun 21, 2026 · 7:42 AM");
   });
 });
+
+import { toChartPoints, xAxisLabels } from "./activity-detail";
+
+describe("toChartPoints", () => {
+  it("converts distance to km and pairs with the series", () => {
+    const pts = toChartPoints([0, 1000, 2000], [100, 150, 200], "metric");
+    expect(pts).toEqual([{ x: 0, y: 100 }, { x: 1, y: 150 }, { x: 2, y: 200 }]);
+  });
+  it("downsamples to maxPoints", () => {
+    const d = Array.from({ length: 1000 }, (_, i) => i);
+    const s = Array.from({ length: 1000 }, () => 200);
+    expect(toChartPoints(d, s, "metric", { maxPoints: 100 }).length).toBeLessThanOrEqual(100);
+  });
+  it("is empty when a channel is null", () => {
+    expect(toChartPoints(null, [1, 2], "metric")).toEqual([]);
+    expect(toChartPoints([0, 1], null, "metric")).toEqual([]);
+  });
+});
+
+describe("xAxisLabels", () => {
+  it("returns 5 quarter labels", () => {
+    expect(xAxisLabels(84300, "metric")).toEqual(["0.0", "21.1", "42.1", "63.2", "84.3"]); // 42.15 → "42.1" (IEEE754 toFixed)
+  });
+});
