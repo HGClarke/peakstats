@@ -47,6 +47,7 @@
     --muted5: #a0a6ae;
     --good: #1f9d63;
     --good-soft: rgba(31, 157, 99, 0.12);
+    --ride-green-soft: rgba(31, 157, 99, 0.12);
     --bad: #d9534f;
     --bad-soft: rgba(217, 83, 79, 0.12);
     --accent-soft: rgba(252, 76, 2, 0.12);
@@ -99,6 +100,7 @@
     --muted5: #5b6472;
     --good: #34d399;
     --good-soft: rgba(52, 211, 153, 0.13);
+    --ride-green-soft: rgba(52, 211, 153, 0.13);
     --bad: #f87171;
     --bad-soft: rgba(248, 113, 113, 0.12);
     --accent-soft: rgba(252, 76, 2, 0.12);
@@ -174,6 +176,7 @@
   --color-muted5: var(--muted5);
   --color-good: var(--good);
   --color-good-soft: var(--good-soft);
+  --color-ride-green-soft: var(--ride-green-soft);
   --color-bad: var(--bad);
   --color-bad-soft: var(--bad-soft);
   --color-strava-soft: var(--accent-soft);

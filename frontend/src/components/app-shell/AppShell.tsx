@@ -4,14 +4,7 @@ import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 
 export function AppShell({
-  navActive,
-  athlete,
-  syncLabel,
-  onLogout,
-  title,
-  subtitle,
-  headerRight,
-  children,
+  navActive, athlete, syncLabel, onLogout, title, subtitle, headerRight, backTo, children,
 }: {
   navActive: string;
   athlete: Athlete | null;
@@ -20,13 +13,14 @@ export function AppShell({
   title: string;
   subtitle?: string;
   headerRight?: ReactNode;
+  backTo?: string;
   children: ReactNode;
 }) {
   return (
-    <div className="relative flex min-h-screen h-screen bg-surface-page text-ink overflow-hidden">
+    <div className="relative flex min-h-screen h-screen bg-surface-page text-ink overflow-hidden transition-colors duration-300">
       <Sidebar navActive={navActive} athlete={athlete} syncLabel={syncLabel} onLogout={onLogout} />
       <div className="flex-1 flex flex-col min-w-0">
-        <Topbar title={title} subtitle={subtitle} right={headerRight} />
+        <Topbar title={title} subtitle={subtitle} right={headerRight} backTo={backTo} />
         <div className="flex-1 min-h-0 relative overflow-hidden">{children}</div>
       </div>
     </div>
