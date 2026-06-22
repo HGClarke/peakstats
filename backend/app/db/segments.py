@@ -2,10 +2,6 @@ from typing import Any, NotRequired, TypedDict, cast
 
 from supabase import Client
 
-# PostgREST caps each response at its default max-rows; loop in pages of this
-# size until a short page returns so the athlete's full effort history is read.
-EFFORTS_PAGE_SIZE = 1000
-
 
 class SegmentRow(TypedDict):
     id: int
@@ -62,29 +58,26 @@ def set_is_best(client: Client, athlete_id: int, segment_id: int, best_id: int) 
     client.table("segment_efforts").update({"is_best": True}).eq("id", best_id).execute()
 
 
-def list_athlete_efforts(client: Client, athlete_id: int, as_of: str) -> list[dict]:
-    """All of an athlete's efforts ingested at/before ``as_of`` (the snapshot
-    boundary), embedding each segment's name/distance/grade. Pages past the
-    PostgREST max-rows cap so the list is never silently truncated."""
-    rows: list[dict] = []
-    start = 0
-    while True:
-        resp = (
-            client.table("segment_efforts")
-            .select(
-                "id, segment_id, elapsed_time_s, start_date, "
-                "segments(name, distance_m, avg_grade)"
-            )
-            .eq("athlete_id", athlete_id)
-            .lte("created_at", as_of)
-            .range(start, start + EFFORTS_PAGE_SIZE - 1)
-            .execute()
-        )
-        page = cast(list[dict], resp.data)
-        rows.extend(page)
-        if len(page) < EFFORTS_PAGE_SIZE:
-            return rows
-        start += EFFORTS_PAGE_SIZE
+def list_segment_summaries(
+    client: Client, athlete_id: int, *,
+    as_of: str, q: str | None, direction: str, limit: int, offset: int,
+) -> list[dict]:
+    """One page of per-segment summaries for the athlete, aggregated and
+    paginated in Postgres by the ``list_segment_summaries`` RPC. Each row carries
+    a ``total_count`` (the full filtered count, before limit/offset). Only the
+    requested page crosses the wire, so the cost is flat as efforts grow."""
+    resp = client.rpc(
+        "list_segment_summaries",
+        {
+            "p_athlete_id": athlete_id,
+            "p_as_of": as_of,
+            "p_q": q,
+            "p_dir": direction,
+            "p_limit": limit,
+            "p_offset": offset,
+        },
+    ).execute()
+    return cast(list[dict], resp.data)
 
 
 def get_segment(client: Client, segment_id: int) -> SegmentRow | None:
