@@ -9,6 +9,7 @@ import { PrimaryStats } from "./components/PrimaryStats";
 import { PowerChart } from "./components/PowerChart";
 import { ElevationChart } from "./components/ElevationChart";
 import { ZonesPanel } from "./components/ZonesPanel";
+import { ClimbsPanel } from "./components/ClimbsPanel";
 
 export default function ActivityDetailPage() {
   const { id } = useParams();
@@ -52,6 +53,7 @@ export default function ActivityDetailPage() {
                 block={detail.hr_zones} />
             </div>
             <ElevationChart detail={detail} streams={streams} />
+            <ClimbsPanel climbs={detail.climbs} units={units} />
           </>
         )}
       </div>

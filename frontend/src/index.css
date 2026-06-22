@@ -59,6 +59,13 @@
     /* Training zones — light (zone-1 cool → zone-7 hot) */
     --zone-1: #6b7280; --zone-2: #2f8fd0; --zone-3: #1f9d63;
     --zone-4: #a16207; --zone-5: #c2410c; --zone-6: #d9534f; --zone-7: #b91c1c;
+
+    /* Climb category badge — light */
+    --cat-4: #2563c2; --cat-3: #0f9d58; --cat-2: #a16207; --cat-1: #c2410c; --cat-hc: #dc2626;
+
+    /* Grade text color — light */
+    --grade-descent: #5b6675; --grade-green: #0f9d58; --grade-yellow: #a16207;
+    --grade-orange: #c2410c; --grade-red: #dc2626;
   }
 
   .dark {
@@ -116,6 +123,13 @@
     /* Training zones — dark */
     --zone-1: #6b7280; --zone-2: #38bdf8; --zone-3: #34d399;
     --zone-4: #eab308; --zone-5: #f59e0b; --zone-6: #fc4c02; --zone-7: #ef4444;
+
+    /* Climb category badge — dark */
+    --cat-4: #60a5fa; --cat-3: #34d399; --cat-2: #eab308; --cat-1: #f59e0b; --cat-hc: #ef4444;
+
+    /* Grade text color — dark */
+    --grade-descent: #8a909a; --grade-green: #34d399; --grade-yellow: #eab308;
+    --grade-orange: #f59e0b; --grade-red: #ef4444;
   }
 }
 
@@ -202,6 +216,20 @@
   --color-zone-5: var(--zone-5);
   --color-zone-6: var(--zone-6);
   --color-zone-7: var(--zone-7);
+
+  /* Climb category badge tokens */
+  --color-cat-4: var(--cat-4);
+  --color-cat-3: var(--cat-3);
+  --color-cat-2: var(--cat-2);
+  --color-cat-1: var(--cat-1);
+  --color-cat-hc: var(--cat-hc);
+
+  /* Grade text color tokens */
+  --color-grade-descent: var(--grade-descent);
+  --color-grade-green: var(--grade-green);
+  --color-grade-yellow: var(--grade-yellow);
+  --color-grade-orange: var(--grade-orange);
+  --color-grade-red: var(--grade-red);
 }
 
 /* ── Landing page grid background ────────────────────────── */

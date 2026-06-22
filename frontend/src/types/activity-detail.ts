@@ -1,6 +1,16 @@
 export interface ZoneBucketDTO { z: string; name: string; range: string; seconds: number; pct: number }
 export interface ZonesBlockDTO { unset: boolean; avg: number | null; buckets: ZoneBucketDTO[] }
 
+export interface ClimbDTO {
+  name: string;
+  climb_category: number;
+  distance_m: number;
+  avg_grade: number;
+  elev_gain_m: number;
+  time_s: number;
+  vam: number;
+}
+
 export interface ActivityDetailDTO {
   id: number;
   name: string;
@@ -19,6 +29,7 @@ export interface ActivityDetailDTO {
   summary_polyline: string | null;
   power_zones: ZonesBlockDTO;
   hr_zones: ZonesBlockDTO;
+  climbs: ClimbDTO[];
 }
 
 export interface ActivityStreamsDTO {

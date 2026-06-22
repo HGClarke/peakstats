@@ -31,6 +31,7 @@ const detail: ActivityDetailDTO = {
   avg_hr: 148, summary_polyline: "_p~iF~ps|U_ulLnnqC_mqNvxq`@",
   power_zones: { unset: true, avg: null, buckets: [] },
   hr_zones: { unset: true, avg: null, buckets: [] },
+  climbs: [],
 };
 
 beforeEach(() => {

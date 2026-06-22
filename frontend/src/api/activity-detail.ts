@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import { fmtDuration } from "@/lib/format";
+import { fmtDuration, fmtClock } from "@/lib/format";
 import { fmtDistance, fmtElevation, fmtSpeed, type Units } from "@/lib/units";
 import type {
-  ActivityDetailDTO, ActivityStreamsDTO, PrimaryStat,
+  ActivityDetailDTO, ActivityStreamsDTO, PrimaryStat, ClimbDTO,
 } from "@/types/activity-detail";
 import { apiFetch } from "./client";
 
@@ -112,4 +112,45 @@ export function toZoneRows(block: ZonesBlockDTO): ZoneRowVM[] {
     dur: fmtDuration(b.seconds),
     pctLabel: `${Math.round(b.pct)}%`,
   }));
+}
+
+export interface ClimbRowVM {
+  name: string; catLabel: string; catColor: string; length: string;
+  grade: string; gradeColor: string; gain: string; vam: string; time: string;
+}
+
+// Strava climb_category: 1→Cat 4 (easiest) … 4→Cat 1, 5→HC (hardest).
+const CAT_LABEL: Record<number, string> = { 1: "CAT 4", 2: "CAT 3", 3: "CAT 2", 4: "CAT 1", 5: "HC" };
+const CAT_TOKEN: Record<number, string> = {
+  1: "var(--color-cat-4)", 2: "var(--color-cat-3)", 3: "var(--color-cat-2)",
+  4: "var(--color-cat-1)", 5: "var(--color-cat-hc)",
+};
+
+/** Grade-text color token by steepness band (matches the design's gradeColor). */
+export function gradeColorToken(grade: number): string {
+  if (grade < 0) return "var(--color-grade-descent)";
+  if (grade < 4) return "var(--color-grade-green)";
+  if (grade < 8) return "var(--color-grade-yellow)";
+  if (grade < 12) return "var(--color-grade-orange)";
+  return "var(--color-grade-red)";
+}
+
+export function toClimbRows(climbs: ClimbDTO[], units: Units): ClimbRowVM[] {
+  const vamUnit = units === "imperial" ? "ft/h" : "m/h";
+  return climbs.map((c) => {
+    const len = fmtDistance(c.distance_m, units);
+    const gain = fmtElevation(c.elev_gain_m, units);
+    const vam = fmtElevation(c.vam, units);
+    return {
+      name: c.name,
+      catLabel: CAT_LABEL[c.climb_category] ?? `CAT ${c.climb_category}`,
+      catColor: CAT_TOKEN[c.climb_category] ?? "var(--color-cat-4)",
+      length: `${len.value} ${len.unit}`,
+      grade: `${c.avg_grade.toFixed(1)}%`,
+      gradeColor: gradeColorToken(c.avg_grade),
+      gain: `+${gain.value} ${gain.unit}`,
+      vam: `${vam.value} ${vamUnit}`,
+      time: fmtClock(c.time_s),
+    };
+  });
 }

@@ -10,6 +10,7 @@ const d = (o: Partial<ActivityDetailDTO> = {}): ActivityDetailDTO => ({
   avg_hr: 148, summary_polyline: "abc",
   power_zones: { unset: true, avg: null, buckets: [] },
   hr_zones: { unset: true, avg: null, buckets: [] },
+  climbs: [],
   ...o,
 });
 
@@ -78,5 +79,32 @@ describe("toZoneRows", () => {
     expect(rows[1].barW).toBe("100.0%");
     expect(rows[0].pctLabel).toBe("20%");
     expect(rows[0].dur).toBe("10m");      // 600s
+  });
+});
+
+import { toClimbRows } from "./activity-detail";
+
+describe("toClimbRows", () => {
+  it("labels category (Strava: climb_category 2 → Cat 3), length, grade and gain", () => {
+    const rows = toClimbRows([{ name: "Marincello", climb_category: 2, distance_m: 4300,
+      avg_grade: 7.2, elev_gain_m: 310, time_s: 1089, vam: 1025 }], "metric");
+    expect(rows[0]).toMatchObject({
+      name: "Marincello", catLabel: "CAT 3", length: "4.3 km",
+      grade: "7.2%", gain: "+310 m", vam: "1,025 m/h", time: "18:09",
+    });
+    expect(rows[0].catColor).toBe("var(--color-cat-3)");
+  });
+  it("colors the grade text by band, theme-aware via tokens (no background)", () => {
+    const grade = (g: number) => toClimbRows([{ name: "X", climb_category: 1, distance_m: 1000,
+      avg_grade: g, elev_gain_m: 100, time_s: 600, vam: 600 }], "metric")[0].gradeColor;
+    expect(grade(-2)).toBe("var(--color-grade-descent)");
+    expect(grade(2)).toBe("var(--color-grade-green)");
+    expect(grade(6)).toBe("var(--color-grade-yellow)");
+    expect(grade(10)).toBe("var(--color-grade-orange)");
+    expect(grade(14)).toBe("var(--color-grade-red)");
+  });
+  it("labels HC for climb_category 5", () => {
+    expect(toClimbRows([{ name: "X", climb_category: 5, distance_m: 1000, avg_grade: 10,
+      elev_gain_m: 100, time_s: 600, vam: 600 }], "metric")[0].catLabel).toBe("HC");
   });
 });
