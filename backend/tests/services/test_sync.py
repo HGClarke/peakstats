@@ -313,3 +313,68 @@ def test_run_detail_backfill_backs_off_on_429(monkeypatch):
     sync_service.run_detail_backfill(FakeSupabase(), settings=object(), athlete_id=7)
     assert calls["n"] == 2          # retried after the 429
     assert 2 in slept               # honoured Retry-After
+
+
+def test_run_detail_backfill_isolates_per_activity_failures(monkeypatch):
+    fetched, stored, marked = [], [], []
+
+    class FakeStrava:
+        def get_activity(self, access_token, activity_id):
+            fetched.append(activity_id)
+            return {"id": activity_id, "splits_metric": None, "segment_efforts": []}
+
+        def close(self):
+            pass
+
+    def store(supabase, athlete_id, detail):
+        if detail["id"] == 2:
+            raise RuntimeError("boom on activity 2")
+        stored.append(detail["id"])
+
+    # One batch of 3, then empty. The lambda ignores the (growing) limit arg.
+    pending = [[{"id": 1}, {"id": 2}, {"id": 3}], []]
+    monkeypatch.setattr(sync_service, "build_strava", lambda settings: FakeStrava())
+    monkeypatch.setattr(sync_service, "get_valid_access_token",
+                        lambda supabase, strava, athlete_id: "AT")
+    monkeypatch.setattr(sync_service.activities_db, "list_activities_needing_detail",
+                        lambda supabase, athlete_id, limit: pending.pop(0))
+    monkeypatch.setattr(sync_service.segments_service, "store_activity_efforts", store)
+    monkeypatch.setattr(
+        sync_service.activities_db, "mark_detail_fetched",
+        lambda supabase, activity_id, splits_metric, fetched_at: marked.append(activity_id),
+    )
+    monkeypatch.setattr(sync_service.time, "sleep", lambda s: None)
+
+    sync_service.run_detail_backfill(FakeSupabase(), settings=object(), athlete_id=7)
+    assert fetched == [1, 2, 3]     # every activity attempted
+    assert stored == [1, 3]         # activity 2 failed mid-store
+    assert marked == [1, 3]         # 2 left unmarked (detail_fetched_at stays NULL)
+
+
+def test_run_detail_backfill_refreshes_token_each_activity(monkeypatch):
+    token_calls = []
+
+    class FakeStrava:
+        def get_activity(self, access_token, activity_id):
+            return {"id": activity_id, "splits_metric": None, "segment_efforts": []}
+
+        def close(self):
+            pass
+
+    def fake_token(supabase, strava, athlete_id):
+        token_calls.append(1)
+        return "AT"
+
+    pending = [[{"id": 1}, {"id": 2}], []]
+    monkeypatch.setattr(sync_service, "build_strava", lambda settings: FakeStrava())
+    monkeypatch.setattr(sync_service, "get_valid_access_token", fake_token)
+    monkeypatch.setattr(sync_service.activities_db, "list_activities_needing_detail",
+                        lambda supabase, athlete_id, limit: pending.pop(0))
+    monkeypatch.setattr(sync_service.segments_service, "store_activity_efforts",
+                        lambda supabase, athlete_id, detail: None)
+    monkeypatch.setattr(sync_service.activities_db, "mark_detail_fetched",
+                        lambda supabase, activity_id, splits_metric, fetched_at: None)
+    monkeypatch.setattr(sync_service.time, "sleep", lambda s: None)
+
+    sync_service.run_detail_backfill(FakeSupabase(), settings=object(), athlete_id=7)
+    assert len(token_calls) == 2    # token re-validated once per activity

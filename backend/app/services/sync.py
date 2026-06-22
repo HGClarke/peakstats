@@ -161,25 +161,40 @@ def _fetch_detail_with_backoff(strava: object, access_token: str, activity_id: i
 def run_detail_backfill(supabase: Client, settings: Settings, athlete_id: int) -> None:
     """Fetch detail for activities lacking it; extract efforts + store splits.
 
-    Resumable: selects only activities with detail_fetched_at IS NULL, so a
-    restart mid-run continues with the remainder on the next invocation.
+    Built for a long (~hour), rate-limited run over the full history:
+    - Per-activity isolation: a single failed ride is logged and skipped (left
+      with detail_fetched_at NULL) so one transient error never aborts the batch.
+    - Token refreshed each iteration: access tokens expire hourly, so a multi-hour
+      run re-validates before every fetch (get_valid_access_token only re-auths
+      when near expiry).
+    - Resumable: only activities with detail_fetched_at IS NULL are selected, and
+      skipped ones stay NULL, so a later run retries them. The in-run `failed` set
+      prevents re-querying the same skips in a tight loop.
     """
     strava = build_strava(settings)
+    failed: set[int] = set()
     try:
-        access_token = get_valid_access_token(supabase, strava, athlete_id)
         while True:
             pending = activities_db.list_activities_needing_detail(
-                supabase, athlete_id, DETAIL_BATCH
+                supabase, athlete_id, DETAIL_BATCH + len(failed)
             )
-            if not pending:
+            batch = [row for row in pending if row["id"] not in failed]
+            if not batch:
                 break
-            for row in pending:
-                detail = _fetch_detail_with_backoff(strava, access_token, row["id"])
-                segments_service.store_activity_efforts(supabase, athlete_id, detail)
-                activities_db.mark_detail_fetched(
-                    supabase, row["id"], detail.get("splits_metric"),
-                    datetime.now(UTC).isoformat(),
-                )
+            for row in batch:
+                try:
+                    access_token = get_valid_access_token(supabase, strava, athlete_id)
+                    detail = _fetch_detail_with_backoff(strava, access_token, row["id"])
+                    segments_service.store_activity_efforts(supabase, athlete_id, detail)
+                    activities_db.mark_detail_fetched(
+                        supabase, row["id"], detail.get("splits_metric"),
+                        datetime.now(UTC).isoformat(),
+                    )
+                except Exception:
+                    logger.exception(
+                        "Detail backfill: skipping activity %s", row["id"]
+                    )
+                    failed.add(row["id"])
                 time.sleep(DETAIL_PAUSE_S)
     except Exception:
         logger.exception("Detail backfill failed for athlete %s", athlete_id)
