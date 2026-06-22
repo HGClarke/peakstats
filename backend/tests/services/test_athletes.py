@@ -89,3 +89,22 @@ def test_update_settings_returns_none_when_missing(monkeypatch):
     monkeypatch.setattr(athletes.athletes_db, "get_athlete",
                         lambda supabase, athlete_id: None)
     assert athletes.update_settings(object(), 7, SettingsUpdate(theme="light")) is None
+
+
+def test_update_settings_returns_none_when_row_vanishes_after_get(monkeypatch):
+    from app.models.athlete import SettingsUpdate
+
+    monkeypatch.setattr(
+        athletes.athletes_db, "get_athlete",
+        lambda supabase, athlete_id: {
+            "id": 7, "name": "Ada", "avatar_url": None,
+            "settings": {"units": "metric", "theme": "dark", "default_period": "week"},
+        },
+    )
+    # Simulate TOCTOU: row deleted between get_athlete and update_settings
+    monkeypatch.setattr(
+        athletes.athletes_db, "update_settings",
+        lambda supabase, athlete_id, settings: None,
+    )
+    result = athletes.update_settings(object(), 7, SettingsUpdate(units="imperial"))
+    assert result is None

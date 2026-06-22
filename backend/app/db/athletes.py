@@ -33,12 +33,12 @@ def delete_athlete(client: Client, athlete_id: int) -> None:
     client.table("athletes").delete().eq("id", athlete_id).execute()
 
 
-def update_settings(client: Client, athlete_id: int, settings: dict) -> AthleteRow:
-    """Overwrite the athlete's settings JSONB and return the updated row."""
+def update_settings(client: Client, athlete_id: int, settings: dict) -> AthleteRow | None:
+    """Overwrite the athlete's settings JSONB; return the updated row, or None if no row matched."""
     resp = (
         client.table("athletes")
         .update({"settings": settings})
         .eq("id", athlete_id)
         .execute()
     )
-    return cast(AthleteRow, resp.data[0])
+    return cast(AthleteRow, resp.data[0]) if resp.data else None

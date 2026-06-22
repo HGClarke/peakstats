@@ -65,3 +65,15 @@ def test_update_settings_writes_and_scopes_by_id():
     assert req.url.params["id"] == "eq.7"
     assert b'"units": "imperial"' in req.content or b'"units":"imperial"' in req.content
     assert row["settings"]["units"] == "imperial"
+
+
+@respx.mock
+def test_update_settings_returns_none_when_row_missing():
+    respx.route(method="PATCH", path="/rest/v1/athletes").mock(
+        return_value=Response(200, json=[])
+    )
+    result = athletes.update_settings(
+        CLIENT, 7,
+        {"units": "imperial", "theme": "dark", "default_period": "week"},
+    )
+    assert result is None

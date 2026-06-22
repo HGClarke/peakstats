@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAthlete } from "@/api/auth";
 import { patchSettings } from "@/api/settings";
 import type { Units } from "@/lib/units";
@@ -14,6 +15,7 @@ function initialTheme(): Theme {
 }
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
   const { data: athlete } = useAthlete();
 
   // Local overrides — null means "defer to server record".
@@ -42,13 +44,17 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const setUnits = (next: Units) => {
     const prev = localUnits;
     setLocalUnits(next);
-    patchSettings({ units: next }).catch(() => setLocalUnits(prev));
+    patchSettings({ units: next })
+      .then((updated) => queryClient.setQueryData(["athlete"], updated))
+      .catch(() => setLocalUnits(prev));
   };
 
   const setTheme = (next: Theme) => {
     const prev = localTheme;
     setLocalTheme(next);
-    patchSettings({ theme: next }).catch(() => setLocalTheme(prev));
+    patchSettings({ theme: next })
+      .then((updated) => queryClient.setQueryData(["athlete"], updated))
+      .catch(() => setLocalTheme(prev));
   };
 
   const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark");

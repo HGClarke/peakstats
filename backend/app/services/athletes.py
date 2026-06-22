@@ -46,6 +46,8 @@ def update_settings(
         return None
     merged = {**row["settings"], **patch.model_dump(exclude_none=True)}
     updated = athletes_db.update_settings(supabase, athlete_id, merged)
+    if updated is None:
+        return None
     return AthleteResponse(
         id=updated["id"],
         name=updated["name"],
