@@ -1,5 +1,5 @@
 // frontend/src/pages/segments/SegmentsPage.tsx
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { logout, useAthlete } from "@/api/auth";
 import { toSegmentRow, useSegments } from "@/api/segments";
@@ -8,7 +8,6 @@ import { AppShell } from "@/components/app-shell/AppShell";
 import { SearchInput } from "@/components/SearchInput";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import type { SortDir } from "@/types/segments";
-import { useEffect } from "react";
 import { SegmentTable } from "./components/SegmentTable";
 
 export default function SegmentsPage() {
