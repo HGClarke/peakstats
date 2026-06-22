@@ -19,7 +19,10 @@ beforeEach(() => {
     data: { id: 7, name: "Ada", avatar_url: null, settings: { units: "metric", theme: "dark", default_period: "week" } },
     isLoading: false, error: null,
   });
-  (patchSettings as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({});
+  (patchSettings as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+    id: 7, name: "Ada", avatar_url: null,
+    settings: { units: "metric", theme: "dark", default_period: "week" },
+  });
   (disconnect as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
 });
 afterEach(() => vi.clearAllMocks());
@@ -52,4 +55,12 @@ it("typing into FTP watts and blurring calls patchSettings with ftp_w", async ()
   fireEvent.change(input, { target: { value: "280" } });
   fireEvent.blur(input);
   await waitFor(() => expect(patchSettings).toHaveBeenCalledWith({ ftp_w: 280 }));
+});
+
+it("typing into Max HR and blurring calls patchSettings with hr_max", async () => {
+  renderPage();
+  const input = screen.getByRole("spinbutton", { name: "Max heart rate" });
+  fireEvent.change(input, { target: { value: "185" } });
+  fireEvent.blur(input);
+  await waitFor(() => expect(patchSettings).toHaveBeenCalledWith({ hr_max: 185 }));
 });

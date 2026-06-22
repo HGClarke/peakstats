@@ -8,8 +8,8 @@ const title = "font-display font-medium text-[15px] text-ink";
 const meta = "font-mono text-[11px] text-faint";
 
 export function PowerChart({ detail, streams }: { detail: ActivityDetailDTO; streams?: ActivityStreamsDTO }) {
-  const { isDark } = useSettings();
-  const pts = toChartPoints(streams?.distance ?? null, streams?.watts ?? null, "metric");
+  const { isDark, units } = useSettings();
+  const pts = toChartPoints(streams?.distance ?? null, streams?.watts ?? null, units);
   const gridColor = isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.08)";
   return (
     <div className={card}>

@@ -9,7 +9,7 @@ import { apiFetch } from "./client";
 const WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MO = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-/** "Sat · Jun 21, 2026 · 7:42 AM" from start_date_local (fallback start_date). */
+/** "Sun · Jun 21, 2026 · 7:42 AM" from start_date_local (fallback start_date). */
 export function metaLabel(d: ActivityDetailDTO): string {
   // start_date_local is a naive wall-clock string (no zone); start_date ends in Z.
   // Append Z to naive strings so `new Date` parses them as UTC and getUTC* returns

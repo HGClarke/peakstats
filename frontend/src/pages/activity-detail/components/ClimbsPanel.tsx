@@ -19,8 +19,8 @@ export function ClimbsPanel({ climbs, units }: { climbs: ClimbDTO[]; units: Unit
           <div className={`${head} px-3 py-[11px] font-mono text-[9.5px] tracking-[0.1em] text-faint border-b border-line-subtle`}>
             <span>CLIMB</span><span>LENGTH</span><span>AVG GRADE</span><span>ELEV GAIN</span><span>VAM</span><span>TIME</span>
           </div>
-          {rows.map((r) => (
-            <div key={r.name} className={`${head} items-center px-3 py-3.5 rounded-[10px] hover:bg-surface-panel2`}>
+          {rows.map((r, i) => (
+            <div key={`${r.name}-${i}`} className={`${head} items-center px-3 py-3.5 rounded-[10px] hover:bg-surface-panel2`}>
               <div className="flex items-center gap-[11px] min-w-0">
                 <span
                   className="font-mono text-[9px] font-semibold tracking-[0.04em] px-[7px] py-0.5 rounded-[5px] flex-none border"
