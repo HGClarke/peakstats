@@ -31,3 +31,14 @@ def get_athlete(client: Client, athlete_id: int) -> AthleteRow | None:
 def delete_athlete(client: Client, athlete_id: int) -> None:
     """Delete the athlete row and all cascade-deleted related data."""
     client.table("athletes").delete().eq("id", athlete_id).execute()
+
+
+def update_settings(client: Client, athlete_id: int, settings: dict) -> AthleteRow:
+    """Overwrite the athlete's settings JSONB and return the updated row."""
+    resp = (
+        client.table("athletes")
+        .update({"settings": settings})
+        .eq("id", athlete_id)
+        .execute()
+    )
+    return cast(AthleteRow, resp.data[0])
