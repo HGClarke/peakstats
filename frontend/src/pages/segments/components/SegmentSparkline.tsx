@@ -14,7 +14,7 @@ export function SegmentSparkline({ trend }: { trend: TrendPoint[] }) {
         <LineChart data={trend} margin={{ top: 6, right: 6, bottom: 6, left: 6 }}>
           <YAxis hide domain={["dataMin", "dataMax"]} />
           <Line
-            type="monotone"
+            type="linear"
             dataKey="t"
             stroke={stroke}
             strokeWidth={1.5}
