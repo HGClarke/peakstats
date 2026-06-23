@@ -5,6 +5,8 @@ import { apiFetch } from "./client";
 export type SettingsPatch = {
   units?: Units;
   theme?: "dark" | "light";
+  ftp_w?: number;
+  hr_max?: number;
 };
 
 /** Persist a partial settings update; resolves with the updated athlete. */

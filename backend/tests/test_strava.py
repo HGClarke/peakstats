@@ -1,7 +1,9 @@
 from datetime import UTC
 
 import httpx
-from app.strava import StravaClient
+import respx
+from app.strava import API_BASE_URL, StravaClient
+from httpx import Response
 
 
 def _client(handler) -> StravaClient:
@@ -146,3 +148,24 @@ def test_delete_push_subscription_targets_id_with_credentials():
     assert seen["path"] == "/api/v3/push_subscriptions/42"
     assert seen["params"]["client_id"] == "cid"
     assert seen["params"]["client_secret"] == "secret"
+
+
+def _respx_client() -> StravaClient:
+    return StravaClient(httpx.Client(), "cid", "sec", "http://cb")
+
+
+@respx.mock
+def test_get_activity_streams_flattens_and_passes_params():
+    route = respx.get(f"{API_BASE_URL}/activities/555/streams").mock(
+        return_value=Response(200, json={
+            "watts": {"data": [100, 200], "type": "watts"},
+            "altitude": {"data": [10.0, 12.5], "type": "altitude"},
+        })
+    )
+    out = _respx_client().get_activity_streams("tok", 555, ["watts", "altitude"])
+    assert out == {"watts": [100, 200], "altitude": [10.0, 12.5]}
+    params = route.calls.last.request.url.params
+    assert params["keys"] == "watts,altitude"
+    assert params["key_by_type"] == "true"
+    assert params["resolution"] == "high"
+    assert route.calls.last.request.headers["Authorization"] == "Bearer tok"

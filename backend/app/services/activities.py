@@ -5,20 +5,31 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from supabase import Client
 
 from app.db import activities as activities_db
+from app.db import athletes as athletes_db
+from app.db import streams as streams_db
 from app.db.activities import ActivityRow
 from app.models.activities import (
+    ActivityDetailResponse,
     ActivityListItem,
     ActivityListResponse,
+    ActivityStreamsResponse,
+    ClimbItem,
     OverviewResponse,
     RecentRideItem,
     SortDir,
     SortField,
     WeekDay,
     WeekTotals,
+    ZoneBucket,
+    ZonesBlock,
 )
+from app.services import analysis
+from app.services.tokens import get_valid_access_token
+from app.strava import StravaClient
 
 RECENT_LIMIT = 5
 PAGE_SIZE = 9
+STREAM_KEYS = ["time", "distance", "altitude", "heartrate", "watts", "velocity_smooth"]
 
 _SORT_COLUMNS: dict[SortField, str] = {
     "date": "start_date",
@@ -159,4 +170,117 @@ def list_activities(
         total=total,
         total_pages=max(1, ceil(total / PAGE_SIZE)),
         as_of=snapshot,
+    )
+
+
+def ensure_streams(
+    supabase: Client,
+    strava: StravaClient,
+    athlete_id: int,
+    activity_id: int,
+) -> dict[str, list]:
+    """Return cached stream data for the activity, fetching from Strava on miss.
+
+    Stores a sentinel (empty data, point_count 0) when Strava has no streams, so
+    we never refetch. `data` is the flat object-of-arrays.
+    """
+    existing = streams_db.get_streams(supabase, activity_id)
+    if existing is not None:
+        return existing["data"]
+    token = get_valid_access_token(supabase, strava, athlete_id)
+    data = strava.get_activity_streams(token, activity_id, STREAM_KEYS)
+    point_count = len(data.get("time") or data.get("distance") or [])
+    streams_db.upsert_streams(supabase, {
+        "activity_id": activity_id, "athlete_id": athlete_id,
+        "data": data, "resolution": "high", "point_count": point_count,
+    })
+    return data
+
+
+def get_streams_payload(
+    supabase: Client,
+    strava: StravaClient,
+    athlete_id: int,
+    activity_id: int,
+) -> ActivityStreamsResponse:
+    data = ensure_streams(supabase, strava, athlete_id, activity_id)
+    return ActivityStreamsResponse(
+        point_count=len(data.get("time") or data.get("distance") or []),
+        time=data.get("time"),
+        distance=data.get("distance"),
+        altitude=data.get("altitude"),
+        watts=data.get("watts"),
+        heartrate=data.get("heartrate"),
+        velocity_smooth=data.get("velocity_smooth"),
+    )
+
+
+class ActivityNotFoundError(Exception):
+    """Raised when an activity does not exist for the requesting athlete."""
+
+
+def _zones_block(
+    time: list,
+    series: list | None,
+    zone_defs: list[dict],
+    bound: int | None,
+) -> ZonesBlock:
+    if bound is None or not series:
+        return ZonesBlock(unset=True)
+    buckets = [ZoneBucket(**b) for b in analysis.time_in_zones(time, series, zone_defs)]
+    return ZonesBlock(unset=False, avg=analysis.weighted_mean(time, series), buckets=buckets)
+
+
+def get_detail(
+    supabase: Client,
+    strava: StravaClient,
+    athlete_id: int,
+    activity_id: int,
+) -> ActivityDetailResponse:
+    row = activities_db.get_activity(supabase, athlete_id, activity_id)
+    if row is None:
+        raise ActivityNotFoundError(f"activity {activity_id} not found for athlete")
+    data = ensure_streams(supabase, strava, athlete_id, activity_id)
+    time = data.get("time") or []
+    watts = data.get("watts")
+    hr = data.get("heartrate")
+    athlete_row = athletes_db.get_athlete(supabase, athlete_id)
+    settings: dict = athlete_row.get("settings", {}) if athlete_row else {}
+    ftp = settings.get("ftp_w")
+    hr_max = settings.get("hr_max")
+    power_block = (
+        _zones_block(time, watts, analysis.power_zones(ftp), ftp)
+        if ftp else ZonesBlock(unset=True)
+    )
+    hr_block = (
+        _zones_block(time, hr, analysis.hr_zones(hr_max), hr_max)
+        if hr_max else ZonesBlock(unset=True)
+    )
+    climb_rows = [
+        {"name": r["segments"]["name"], "climb_category": r["segments"]["climb_category"],
+         "distance_m": r["segments"]["distance_m"], "avg_grade": r["segments"]["avg_grade"],
+         "elev_gain_m": r["segments"]["elev_gain_m"], "elapsed_time_s": r["elapsed_time_s"]}
+        for r in activities_db.list_activity_climbs(supabase, athlete_id, activity_id)
+        if r.get("segments") and r["segments"]["climb_category"] > 0
+    ]
+    climbs = [
+        ClimbItem(name=c["name"], climb_category=c["climb_category"], distance_m=c["distance_m"],
+                  avg_grade=c["avg_grade"], elev_gain_m=c["elev_gain_m"],
+                  time_s=c["elapsed_time_s"], vam=c["vam"])
+        for c in analysis.compute_climbs(climb_rows)
+    ]
+    return ActivityDetailResponse(
+        id=row["id"], name=row["name"], type=row["type"],
+        start_date=row["start_date"], start_date_local=row.get("start_date_local"),
+        location=None,
+        distance_m=row["distance_m"], moving_time_s=row["moving_time_s"],
+        elev_gain_m=row["elev_gain_m"], avg_speed_ms=row.get("avg_speed_ms"),
+        avg_power_w=analysis.weighted_mean(time, watts) if watts else None,
+        normalized_power_w=analysis.normalized_power(time, watts),
+        work_kj=analysis.total_work_kj(time, watts),
+        avg_hr=row.get("avg_hr"),
+        summary_polyline=row.get("summary_polyline"),
+        power_zones=power_block,
+        hr_zones=hr_block,
+        climbs=climbs,
     )

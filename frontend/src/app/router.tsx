@@ -1,6 +1,7 @@
 import { createBrowserRouter, type RouteObject } from "react-router";
 import AppHome from "@/pages/app-home/AppHome";
 import ActivitiesPage from "@/pages/activities/ActivitiesPage";
+import ActivityDetailPage from "@/pages/activity-detail/ActivityDetailPage";
 import LandingPage from "@/pages/landing/LandingPage";
 import NotFoundPage from "@/pages/not-found/NotFoundPage";
 import SegmentDetailPage from "@/pages/segments/SegmentDetailPage";
@@ -16,6 +17,7 @@ export const routes: RouteObject[] = [
   { path: "/", element: <LandingPage /> },
   { path: "/home", element: <AppHome /> },
   { path: "/activities", element: <ActivitiesPage /> },
+  { path: "/activities/:id", element: <ActivityDetailPage /> },
   { path: "/sync", element: <SyncPage /> },
   { path: "/segments", element: <SegmentsPage /> },
   { path: "/segments/:id", element: <SegmentDetailPage /> },

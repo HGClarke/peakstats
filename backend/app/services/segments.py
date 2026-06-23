@@ -27,11 +27,20 @@ def extract_efforts(
         distance = seg.get("distance", 0.0)
         elapsed = e["elapsed_time"]
         hr = e.get("average_heartrate")
+        high = seg.get("elevation_high")
+        low = seg.get("elevation_low")
+        gain = (
+            (high - low)
+            if (high is not None and low is not None)
+            else seg.get("total_elevation_gain", 0.0)
+        )
         seg_by_id[seg_id] = {
             "id": seg_id,
             "name": seg.get("name") or "Segment",
             "distance_m": distance,
             "avg_grade": seg.get("average_grade", 0.0),
+            "climb_category": seg.get("climb_category", 0) or 0,
+            "elev_gain_m": float(gain or 0.0),
         }
         efforts.append(
             {

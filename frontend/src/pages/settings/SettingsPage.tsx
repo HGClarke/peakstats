@@ -1,5 +1,7 @@
 import { useNavigate } from "react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import { logout, useAthlete } from "@/api/auth";
+import { patchSettings } from "@/api/settings";
 import { useSettings } from "@/app/providers/settings-context";
 import { useSyncStatus } from "@/api/sync";
 import { AppShell } from "@/components/app-shell/AppShell";
@@ -14,8 +16,11 @@ export default function SettingsPage() {
   const { data: athlete } = useAthlete();
   const { data: status } = useSyncStatus();
   const { units, theme, setUnits, setTheme } = useSettings();
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const handleLogout = async () => { await logout(); navigate("/", { replace: true }); };
+  const ftp = (athlete?.settings as { ftp_w?: number })?.ftp_w ?? "";
+  const hrMax = (athlete?.settings as { hr_max?: number })?.hr_max ?? "";
 
   return (
     <AppShell
@@ -47,6 +52,25 @@ export default function SettingsPage() {
             onChange={setTheme}
             options={[{ label: "Dark", value: "dark" }, { label: "Light", value: "light" }]}
           />
+        </div>
+
+        <div className={section}>
+          <div className={heading}>Training zones</div>
+          <div className={sub}>FTP and max heart rate power your zone breakdowns.</div>
+          <div className="flex gap-4">
+            <label className="flex flex-col gap-1 text-[12px] text-subtle">
+              FTP (W)
+              <input type="number" defaultValue={ftp} aria-label="FTP watts"
+                onBlur={(e) => e.target.value && patchSettings({ ftp_w: Number(e.target.value) }).then((updated) => queryClient.setQueryData(["athlete"], updated)).catch(() => {})}
+                className="w-[120px] bg-surface-inset border border-line rounded-[8px] px-3 py-2 text-ink text-[14px]" />
+            </label>
+            <label className="flex flex-col gap-1 text-[12px] text-subtle">
+              Max HR (bpm)
+              <input type="number" defaultValue={hrMax} aria-label="Max heart rate"
+                onBlur={(e) => e.target.value && patchSettings({ hr_max: Number(e.target.value) }).then((updated) => queryClient.setQueryData(["athlete"], updated)).catch(() => {})}
+                className="w-[120px] bg-surface-inset border border-line rounded-[8px] px-3 py-2 text-ink text-[14px]" />
+            </label>
+          </div>
         </div>
 
         <div className={section}>

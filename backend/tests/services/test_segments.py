@@ -22,7 +22,8 @@ def _detail() -> dict:
 def test_extract_efforts_maps_segment_and_effort_fields():
     segs, efforts = svc.extract_efforts(7, _detail())
     assert {s["id"] for s in segs} == {5}
-    assert segs[0] == {"id": 5, "name": "Hill", "distance_m": 1200.0, "avg_grade": 4.8}
+    assert segs[0] == {"id": 5, "name": "Hill", "distance_m": 1200.0, "avg_grade": 4.8,
+                       "climb_category": 0, "elev_gain_m": 0.0}
     e0 = next(e for e in efforts if e["id"] == 9)
     assert e0["segment_id"] == 5 and e0["athlete_id"] == 7 and e0["activity_id"] == 1001
     assert e0["elapsed_time_s"] == 120
@@ -37,6 +38,18 @@ def test_extract_efforts_maps_segment_and_effort_fields():
 def test_extract_efforts_empty_when_no_efforts():
     assert svc.extract_efforts(7, {"id": 1, "segment_efforts": []}) == ([], [])
     assert svc.extract_efforts(7, {"id": 1}) == ([], [])
+
+
+def test_extract_efforts_captures_climb_fields():
+    detail = {"id": 1, "segment_efforts": [
+        {"id": 9, "elapsed_time": 1089, "start_date": "2026-06-20T08:00:00Z",
+         "average_watts": 240.0, "average_heartrate": 158.0,
+         "segment": {"id": 5, "name": "Marincello", "distance": 4300.0,
+                     "average_grade": 7.2, "climb_category": 2,
+                     "elevation_high": 360.0, "elevation_low": 50.0}}]}
+    segs, _ = svc.extract_efforts(7, detail)
+    assert segs[0]["climb_category"] == 2
+    assert segs[0]["elev_gain_m"] == 310.0   # 360 - 50
 
 
 def test_best_effort_id_picks_min_time_then_earliest():

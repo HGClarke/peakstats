@@ -155,3 +155,32 @@ def test_mark_detail_fetched_updates_row():
     req = route.calls.last.request
     assert req.url.params["id"] == "eq.3"
     assert b"detail_fetched_at" in req.content
+
+
+@respx.mock
+def test_get_activity_scopes_to_athlete():
+    route = respx.route(method="GET", path="/rest/v1/activities").mock(
+        return_value=Response(200, json=[{"id": 5, "athlete_id": 7, "name": "Ride"}]))
+    row = activities.get_activity(CLIENT, 7, 5)
+    params = route.calls.last.request.url.params
+    assert params["id"] == "eq.5" and params["athlete_id"] == "eq.7"
+    assert row is not None and row["id"] == 5
+
+
+@respx.mock
+def test_get_activity_none_when_missing():
+    respx.route(method="GET", path="/rest/v1/activities").mock(
+        return_value=Response(200, json=[]))
+    assert activities.get_activity(CLIENT, 7, 5) is None
+
+
+@respx.mock
+def test_list_activity_climbs_scopes_to_activity():
+    route = respx.route(method="GET", path="/rest/v1/segment_efforts").mock(
+        return_value=Response(200, json=[
+            {"elapsed_time_s": 1089, "segments": {"name": "Marincello", "climb_category": 2,
+             "distance_m": 4300.0, "avg_grade": 7.2, "elev_gain_m": 310.0}}]))
+    rows = activities.list_activity_climbs(CLIENT, 7, 5)
+    params = route.calls.last.request.url.params
+    assert params["athlete_id"] == "eq.7" and params["activity_id"] == "eq.5"
+    assert rows[0]["segments"]["climb_category"] == 2

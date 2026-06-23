@@ -1,16 +1,19 @@
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from supabase import Client
 
-from app.deps import get_current_athlete_id, get_supabase
+from app.deps import get_current_athlete_id, get_strava, get_supabase
 from app.models.activities import (
+    ActivityDetailResponse,
     ActivityListResponse,
+    ActivityStreamsResponse,
     OverviewResponse,
     SortDir,
     SortField,
 )
 from app.services import activities as activities_service
+from app.strava import StravaClient
 
 router = APIRouter()
 
@@ -42,3 +45,26 @@ def overview(
     supabase: Client = Depends(get_supabase),
 ) -> OverviewResponse:
     return activities_service.get_overview(supabase, athlete_id, tz=tz)
+
+
+@router.get("/{activity_id}", response_model=ActivityDetailResponse)
+def activity_detail(
+    activity_id: int,
+    athlete_id: int = Depends(get_current_athlete_id),
+    supabase: Client = Depends(get_supabase),
+    strava: StravaClient = Depends(get_strava),
+) -> ActivityDetailResponse:
+    try:
+        return activities_service.get_detail(supabase, strava, athlete_id, activity_id)
+    except activities_service.ActivityNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Activity not found") from exc
+
+
+@router.get("/{activity_id}/streams", response_model=ActivityStreamsResponse)
+def activity_streams(
+    activity_id: int,
+    athlete_id: int = Depends(get_current_athlete_id),
+    supabase: Client = Depends(get_supabase),
+    strava: StravaClient = Depends(get_strava),
+) -> ActivityStreamsResponse:
+    return activities_service.get_streams_payload(supabase, strava, athlete_id, activity_id)

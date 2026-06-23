@@ -1,8 +1,10 @@
 from datetime import UTC, datetime
 
 from app.models.activities import (
+    ActivityDetailResponse,
     ActivityListItem,
     ActivityListResponse,
+    ActivityStreamsResponse,
     OverviewResponse,
     RecentRideItem,
     WeekDay,
@@ -102,3 +104,46 @@ def test_list_rejects_bad_sort(client):
 def test_list_rejects_bad_as_of(client):
     _auth(client)
     assert client.get("/activities?as_of=not-a-date").status_code == 422
+
+
+def test_streams_requires_session(client):
+    assert client.get("/activities/5/streams").status_code == 401
+
+
+def test_streams_returns_body(client, monkeypatch):
+    monkeypatch.setattr(activities_service, "get_streams_payload",
+        lambda supabase, strava, athlete_id, activity_id:
+            ActivityStreamsResponse(point_count=2, time=[0, 1], distance=[0.0, 5.0],
+                                    watts=[100, 200]))
+    _auth(client)
+    body = client.get("/activities/5/streams").json()
+    assert body["point_count"] == 2 and body["watts"] == [100, 200]
+    assert body["altitude"] is None
+
+
+def _detail() -> ActivityDetailResponse:
+    return ActivityDetailResponse(
+        id=5, name="Gravel", type="Ride", start_date="2026-06-21T14:42:00Z",
+        distance_m=84300.0, moving_time_s=11820, elev_gain_m=1284.0,
+        avg_speed_ms=7.13, avg_power_w=198.0, normalized_power_w=221.0,
+        work_kj=2342.0, avg_hr=148, summary_polyline="abc")
+
+
+def test_detail_requires_session(client):
+    assert client.get("/activities/5").status_code == 401
+
+
+def test_detail_returns_body(client, monkeypatch):
+    monkeypatch.setattr(activities_service, "get_detail",
+        lambda supabase, strava, athlete_id, activity_id: _detail())
+    _auth(client)
+    body = client.get("/activities/5").json()
+    assert body["name"] == "Gravel" and body["avg_hr"] == 148
+
+
+def test_detail_404_when_missing(client, monkeypatch):
+    def boom(*a: object, **k: object) -> None:
+        raise activities_service.ActivityNotFoundError("nope")
+    monkeypatch.setattr(activities_service, "get_detail", boom)
+    _auth(client)
+    assert client.get("/activities/5").status_code == 404

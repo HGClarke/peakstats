@@ -3,6 +3,10 @@ from app.services import athletes as athletes_service
 from app.session import SESSION_COOKIE, sign_session
 
 
+def _auth(client):
+    client.cookies.set(SESSION_COOKIE, sign_session(99, "test-secret"))
+
+
 def test_athlete_requires_session(client):
     assert client.get("/athlete").status_code == 401
 
@@ -82,3 +86,20 @@ def test_patch_settings_rejects_empty_body(client):
 def test_patch_settings_rejects_bad_enum(client):
     client.cookies.set(SESSION_COOKIE, sign_session(99, "test-secret"))
     assert client.patch("/athlete/settings", json={"units": "furlongs"}).status_code == 422
+
+
+def test_patch_settings_accepts_ftp_and_hr(client, monkeypatch):
+    from app.services import athletes as athletes_service
+    captured = {}
+
+    def fake(supabase, athlete_id, patch):
+        captured["ftp"] = patch.ftp_w
+        captured["hr"] = patch.hr_max
+        from app.models.athlete import AthleteResponse
+        return AthleteResponse(id=athlete_id, name="A", avatar_url=None,
+                               settings={"ftp_w": patch.ftp_w, "hr_max": patch.hr_max})
+
+    monkeypatch.setattr(athletes_service, "update_settings", fake)
+    _auth(client)
+    r = client.patch("/athlete/settings", json={"ftp_w": 280, "hr_max": 190})
+    assert r.status_code == 200 and captured == {"ftp": 280, "hr": 190}
