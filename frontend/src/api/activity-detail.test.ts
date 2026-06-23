@@ -75,8 +75,8 @@ describe("toZoneRows", () => {
     ]});
     expect(rows[0].color).toBe("var(--zone-1)");
     expect(rows[1].color).toBe("var(--zone-2)");
-    expect(rows[0].barW).toBe("50.0%");   // 20/40*100
-    expect(rows[1].barW).toBe("100.0%");
+    expect(rows[0].barW).toBe("20.0%");   // absolute share of total time
+    expect(rows[1].barW).toBe("40.0%");
     expect(rows[0].pctLabel).toBe("20%");
     expect(rows[0].dur).toBe("10m");      // 600s
   });

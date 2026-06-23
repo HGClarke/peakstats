@@ -108,10 +108,10 @@ export function zoneColor(index: number): string {
 }
 
 export function toZoneRows(block: ZonesBlockDTO): ZoneRowVM[] {
-  const maxPct = Math.max(1, ...block.buckets.map((b) => b.pct));
   return block.buckets.map((b, i) => ({
     z: b.z, name: b.name, range: b.range, color: zoneColor(i),
-    barW: `${((b.pct / maxPct) * 100).toFixed(1)}%`,
+    // Bar width is the zone's absolute share of total time, so it matches pctLabel.
+    barW: `${Math.min(100, b.pct).toFixed(1)}%`,
     dur: fmtDuration(b.seconds),
     pctLabel: `${Math.round(b.pct)}%`,
   }));
