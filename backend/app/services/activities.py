@@ -15,11 +15,14 @@ from app.models.activities import (
     ActivityStreamsResponse,
     ClimbItem,
     OverviewResponse,
+    OverviewSummary,
+    Period,
+    PeriodTotals,
     RecentRideItem,
+    RideTypeCount,
     SortDir,
     SortField,
-    WeekDay,
-    WeekTotals,
+    TrendPoint,
     ZoneBucket,
     ZonesBlock,
 )
@@ -39,6 +42,8 @@ _SORT_COLUMNS: dict[SortField, str] = {
     "speed": "avg_speed_ms",
 }
 _WEEKDAY_LABELS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
+_MONTH_LABELS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN",
+                 "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"]
 
 
 def _resolve_tz(tz: str) -> ZoneInfo:
@@ -59,10 +64,10 @@ def _local_naive(row: ActivityRow) -> datetime:
     return datetime.fromisoformat(raw).replace(tzinfo=None)
 
 
-def _totals(rows: list[ActivityRow]) -> WeekTotals:
+def _totals(rows: list[ActivityRow]) -> PeriodTotals:
     distance_m = sum(r["distance_m"] for r in rows)
     moving_time_s = sum(r["moving_time_s"] for r in rows)
-    return WeekTotals(
+    return PeriodTotals(
         distance_m=distance_m,
         elev_gain_m=sum(r["elev_gain_m"] for r in rows),
         moving_time_s=moving_time_s,
@@ -70,60 +75,119 @@ def _totals(rows: list[ActivityRow]) -> WeekTotals:
     )
 
 
+def _add_month(d: datetime) -> datetime:
+    return d.replace(year=d.year + 1, month=1) if d.month == 12 else d.replace(month=d.month + 1)
+
+
+def _sub_month(d: datetime) -> datetime:
+    return d.replace(year=d.year - 1, month=12) if d.month == 1 else d.replace(month=d.month - 1)
+
+
+def _period_bounds(base: datetime, period: Period) -> tuple[datetime, datetime, datetime]:
+    """Return (this_start, this_end, last_start) for the calendar period containing `base`.
+
+    `base` is midnight of the current local day. Bounds are half-open [start, end).
+    """
+    if period == "week":
+        this_start = base - timedelta(days=base.weekday())
+        return this_start, this_start + timedelta(days=7), this_start - timedelta(days=7)
+    if period == "month":
+        this_start = base.replace(day=1)
+        return this_start, _add_month(this_start), _sub_month(this_start)
+    this_start = base.replace(month=1, day=1)  # year
+    last_start = this_start.replace(year=this_start.year - 1)
+    next_start = this_start.replace(year=this_start.year + 1)
+    return this_start, next_start, last_start
+
+
+def _trend(
+    rows: list[ActivityRow],
+    this_start: datetime,
+    this_end: datetime,
+    period: Period,
+) -> list[TrendPoint]:
+    if period == "year":
+        totals = [0.0] * 12
+        for r in rows:
+            totals[_local_naive(r).month - 1] += r["distance_m"]
+        return [TrendPoint(label=_MONTH_LABELS[i], value=round(totals[i], 1)) for i in range(12)]
+
+    n_days = (this_end.date() - this_start.date()).days
+    totals = [0.0] * n_days
+    for r in rows:
+        idx = (_local_naive(r).date() - this_start.date()).days
+        if 0 <= idx < n_days:
+            totals[idx] += r["distance_m"]
+    if period == "week":
+        labels = _WEEKDAY_LABELS
+    else:  # month — day-of-month numbers
+        labels = [str((this_start.date() + timedelta(days=i)).day) for i in range(n_days)]
+    return [TrendPoint(label=labels[i], value=round(totals[i], 1)) for i in range(n_days)]
+
+
+def _summary(rows: list[ActivityRow]) -> OverviewSummary:
+    speeds = [r["avg_speed_ms"] for r in rows if r["avg_speed_ms"] is not None]
+    return OverviewSummary(
+        rides=len(rows),
+        prs=sum(1 for r in rows if r.get("is_pr")),
+        top_speed_ms=max(speeds) if speeds else None,
+        longest_ride_m=max((r["distance_m"] for r in rows), default=0.0),
+        max_elev_m=max((r["elev_gain_m"] for r in rows), default=0.0),
+    )
+
+
+def _ride_types(rows: list[ActivityRow]) -> list[RideTypeCount]:
+    counts: dict[str, int] = {}
+    for r in rows:
+        counts[r["type"]] = counts.get(r["type"], 0) + 1
+    ordered = sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))
+    return [RideTypeCount(type=t, count=c) for t, c in ordered]
+
+
 def get_overview(
     supabase: Client,
     athlete_id: int,
+    *,
     tz: str = "UTC",
+    period: Period = "week",
     now: datetime | None = None,
 ) -> OverviewResponse:
     zone = _resolve_tz(tz)
     now_local = (now or datetime.now(UTC)).astimezone(zone)
-    this_monday = (
-        now_local - timedelta(days=now_local.weekday())
-    ).replace(hour=0, minute=0, second=0, microsecond=0)
-    last_monday = this_monday - timedelta(days=7)
+    base = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
+    this_start, this_end, last_start = _period_bounds(base, period)
 
-    # Rows are fetched by UTC start_date, which can sit up to ~14h off the local
+    # Rows are queried by UTC start_date, which can sit up to ~14h off the local
     # date, so widen the query a day and filter precisely by local time below.
     rows = activities_db.list_activities_since(
-        supabase, athlete_id, (last_monday - timedelta(days=1)).isoformat()
+        supabase, athlete_id, (last_start - timedelta(days=1)).isoformat()
     )
 
-    this_monday_naive = this_monday.replace(tzinfo=None)
-    last_monday_naive = last_monday.replace(tzinfo=None)
-
-    this_week = [r for r in rows if _local_naive(r) >= this_monday_naive]
-    last_week = [
-        r for r in rows
-        if last_monday_naive <= _local_naive(r) < this_monday_naive
-    ]
-
-    km_by_day = [0.0] * 7
-    for r in this_week:
-        km_by_day[_local_naive(r).weekday()] += r["distance_m"] / 1000
-    week = [
-        WeekDay(day=label, km=round(km_by_day[i], 1))
-        for i, label in enumerate(_WEEKDAY_LABELS)
-    ]
+    ts, te, ls = (
+        this_start.replace(tzinfo=None),
+        this_end.replace(tzinfo=None),
+        last_start.replace(tzinfo=None),
+    )
+    this_rows = [r for r in rows if ts <= _local_naive(r) < te]
+    last_rows = [r for r in rows if ls <= _local_naive(r) < ts]
 
     recent = activities_db.list_recent_activities(supabase, athlete_id, RECENT_LIMIT)
     recent_rides = [
         RecentRideItem(
-            id=r["id"],
-            name=r["name"],
-            type=r["type"],
-            start_date=r["start_date"],
-            start_date_local=r.get("start_date_local"),
-            distance_m=r["distance_m"],
-            moving_time_s=r["moving_time_s"],
+            id=r["id"], name=r["name"], type=r["type"], start_date=r["start_date"],
+            start_date_local=r.get("start_date_local"), distance_m=r["distance_m"],
+            moving_time_s=r["moving_time_s"], is_pr=bool(r.get("is_pr")),
         )
         for r in recent
     ]
 
     return OverviewResponse(
-        this_week=_totals(this_week),
-        last_week=_totals(last_week),
-        week=week,
+        period=period,
+        this_period=_totals(this_rows),
+        last_period=_totals(last_rows),
+        trend=_trend(this_rows, this_start, this_end, period),
+        summary=_summary(this_rows),
+        ride_types=_ride_types(this_rows),
         recent_rides=recent_rides,
     )
 

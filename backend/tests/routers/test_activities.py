@@ -6,9 +6,10 @@ from app.models.activities import (
     ActivityListResponse,
     ActivityStreamsResponse,
     OverviewResponse,
+    OverviewSummary,
+    PeriodTotals,
     RecentRideItem,
-    WeekDay,
-    WeekTotals,
+    TrendPoint,
 )
 from app.services import activities as activities_service
 from app.session import SESSION_COOKIE, sign_session
@@ -20,12 +21,16 @@ def _auth(client):
 
 def _overview() -> OverviewResponse:
     return OverviewResponse(
-        this_week=WeekTotals(distance_m=30000.0, elev_gain_m=150.0,
-                             moving_time_s=3000, avg_speed_ms=10.0),
-        last_week=WeekTotals(distance_m=5000.0, elev_gain_m=10.0,
-                             moving_time_s=500, avg_speed_ms=10.0),
-        week=[WeekDay(day=d, km=0.0) for d in
-              ("MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN")],
+        period="week",
+        this_period=PeriodTotals(distance_m=30000.0, elev_gain_m=150.0,
+                                 moving_time_s=3000, avg_speed_ms=10.0),
+        last_period=PeriodTotals(distance_m=5000.0, elev_gain_m=10.0,
+                                 moving_time_s=500, avg_speed_ms=10.0),
+        trend=[TrendPoint(label=d, value=0.0) for d in
+               ("MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN")],
+        summary=OverviewSummary(rides=1, prs=0, top_speed_ms=10.0,
+                                longest_ride_m=10000.0, max_elev_m=100.0),
+        ride_types=[],
         recent_rides=[RecentRideItem(id=1, name="Tue ride", type="Ride",
                                      start_date="2026-06-16T10:00:00Z",
                                      distance_m=10000.0, moving_time_s=1000)],
@@ -38,20 +43,20 @@ def test_overview_requires_session(client):
 
 def test_overview_returns_body(client, monkeypatch):
     monkeypatch.setattr(activities_service, "get_overview",
-                        lambda supabase, athlete_id, tz="UTC": _overview())
+                        lambda supabase, athlete_id, tz="UTC", period="week": _overview())
     _auth(client)
     response = client.get("/activities/overview")
     assert response.status_code == 200
     body = response.json()
-    assert body["this_week"]["distance_m"] == 30000.0
-    assert len(body["week"]) == 7
+    assert body["this_period"]["distance_m"] == 30000.0
+    assert len(body["trend"]) == 7
     assert body["recent_rides"][0]["name"] == "Tue ride"
 
 
 def test_overview_forwards_tz(client, monkeypatch):
     seen = {}
 
-    def fake(supabase, athlete_id, tz="UTC"):
+    def fake(supabase, athlete_id, tz="UTC", period="week"):
         seen["tz"] = tz
         return _overview()
 

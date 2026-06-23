@@ -19,6 +19,7 @@ class ActivityRow(TypedDict):
     avg_hr: int | None
     summary_polyline: str | None
     created_at: NotRequired[str]
+    is_pr: NotRequired[bool]
 
 
 def upsert_activities(client: Client, rows: list[ActivityRow]) -> None:

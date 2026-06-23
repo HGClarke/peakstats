@@ -5,18 +5,32 @@ from pydantic import BaseModel
 
 SortField = Literal["date", "distance", "time", "elevation", "speed"]
 SortDir = Literal["asc", "desc"]
+Period = Literal["week", "month", "year"]
 
 
-class WeekTotals(BaseModel):
+class PeriodTotals(BaseModel):
     distance_m: float
     elev_gain_m: float
     moving_time_s: int
     avg_speed_ms: float | None
 
 
-class WeekDay(BaseModel):
-    day: str
-    km: float
+class TrendPoint(BaseModel):
+    label: str
+    value: float  # distance in meters for the bucket
+
+
+class OverviewSummary(BaseModel):
+    rides: int
+    prs: int
+    top_speed_ms: float | None
+    longest_ride_m: float
+    max_elev_m: float
+
+
+class RideTypeCount(BaseModel):
+    type: str
+    count: int
 
 
 class RecentRideItem(BaseModel):
@@ -27,12 +41,16 @@ class RecentRideItem(BaseModel):
     start_date_local: str | None = None
     distance_m: float
     moving_time_s: int
+    is_pr: bool = False
 
 
 class OverviewResponse(BaseModel):
-    this_week: WeekTotals
-    last_week: WeekTotals
-    week: list[WeekDay]
+    period: Period
+    this_period: PeriodTotals
+    last_period: PeriodTotals
+    trend: list[TrendPoint]
+    summary: OverviewSummary
+    ride_types: list[RideTypeCount]
     recent_rides: list[RecentRideItem]
 
 
