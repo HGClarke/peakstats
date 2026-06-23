@@ -73,8 +73,8 @@ describe("toZoneRows", () => {
       { z: "Z1", name: "Active Rec.", range: "< 154 W", seconds: 600, pct: 20 },
       { z: "Z2", name: "Endurance", range: "154–210 W", seconds: 1200, pct: 40 },
     ]});
-    expect(rows[0].color).toBe("var(--color-zone-1)");
-    expect(rows[1].color).toBe("var(--color-zone-2)");
+    expect(rows[0].color).toBe("var(--zone-1)");
+    expect(rows[1].color).toBe("var(--zone-2)");
     expect(rows[0].barW).toBe("50.0%");   // 20/40*100
     expect(rows[1].barW).toBe("100.0%");
     expect(rows[0].pctLabel).toBe("20%");

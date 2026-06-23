@@ -100,8 +100,11 @@ export interface ZoneRowVM {
   barW: string; dur: string; pctLabel: string;
 }
 
+// Reference the raw --zone-N vars (always emitted in :root/.dark), not the
+// @theme `--color-zone-N` aliases — Tailwind tree-shakes aliases whose names
+// aren't statically visible, and these names are built dynamically.
 export function zoneColor(index: number): string {
-  return `var(--color-zone-${Math.min(index + 1, 7)})`;
+  return `var(--zone-${Math.min(index + 1, 7)})`;
 }
 
 export function toZoneRows(block: ZonesBlockDTO): ZoneRowVM[] {

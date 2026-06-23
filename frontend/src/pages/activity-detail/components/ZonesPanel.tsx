@@ -20,7 +20,7 @@ export function ZonesPanel({ title, meta, block }: { title: string; meta: string
         <>
           <div className="flex h-[9px] rounded-[5px] overflow-hidden mb-[18px]">
             {block.buckets.map((b, i) => (
-              <div key={b.z} style={{ width: `${b.pct}%`, background: `var(--color-zone-${Math.min(i + 1, 7)})` }} />
+              <div key={b.z} style={{ width: `${b.pct}%`, background: `var(--zone-${Math.min(i + 1, 7)})` }} />
             ))}
           </div>
           <div className="flex flex-col gap-[11px]">
