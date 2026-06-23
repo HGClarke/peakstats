@@ -1,6 +1,6 @@
 import "leaflet/dist/leaflet.css";
 import { useEffect } from "react";
-import { CircleMarker, MapContainer, Polyline, TileLayer, useMap } from "react-leaflet";
+import { CircleMarker, MapContainer, Polyline, TileLayer, ZoomControl, useMap } from "react-leaflet";
 import { useSettings } from "@/app/providers/settings-context";
 import { mapTiles } from "@/lib/map-tiles";
 import { boundsOf, decodePolyline, type LatLng } from "@/lib/polyline";
@@ -50,12 +50,13 @@ export default function RouteHero({ detail }: { detail: ActivityDetailDTO }) {
           className="absolute inset-0 h-full w-full"
           zoomControl={false}
           attributionControl
-          dragging={false}
+          dragging
           scrollWheelZoom={false}
-          doubleClickZoom={false}
+          doubleClickZoom
           center={start}
           zoom={12}
         >
+          <ZoomControl position="topright" />
           <TileLayer url={tiles.url} attribution={tiles.attribution} />
           <Polyline positions={points} pathOptions={{ color: "#fc4c02", weight: 4 }} />
           {start && <CircleMarker center={start} radius={6}

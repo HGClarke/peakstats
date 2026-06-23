@@ -7,6 +7,7 @@ vi.mock("react-leaflet", () => ({
   TileLayer: ({ url }: { url: string }) => <div data-testid="tiles" data-url={url} />,
   Polyline: () => <div data-testid="route" />,
   CircleMarker: () => <div data-testid="marker" />,
+  ZoomControl: () => <div data-testid="zoom-control" />,
   useMap: () => ({ fitBounds: vi.fn() }),
 }));
 vi.mock("@/app/providers/settings-context", () => ({ useSettings: () => ({ isDark: true }) }));

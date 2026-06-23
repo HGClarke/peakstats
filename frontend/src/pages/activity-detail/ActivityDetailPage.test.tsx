@@ -12,7 +12,7 @@ vi.mock("@/api/auth", () => ({ useAthlete: () => ({ data: { id: 9, name: "Ada", 
 vi.mock("@/api/sync", () => ({ useSyncStatus: () => ({ data: { status: "idle" } }) }));
 vi.mock("react-leaflet", () => ({
   MapContainer: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  TileLayer: () => null, Polyline: () => null, CircleMarker: () => null, useMap: () => ({ fitBounds: vi.fn() }),
+  TileLayer: () => null, Polyline: () => null, CircleMarker: () => null, ZoomControl: () => null, useMap: () => ({ fitBounds: vi.fn() }),
 }));
 const useActivityDetail = vi.fn();
 const useActivityStreams = vi.fn();
