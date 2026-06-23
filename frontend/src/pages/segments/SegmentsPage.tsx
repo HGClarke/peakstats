@@ -9,6 +9,7 @@ import { AppShell } from "@/components/app-shell/AppShell";
 import { Pager } from "@/components/Pager";
 import { SearchInput } from "@/components/SearchInput";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
+import { useUrlQueryState } from "@/lib/useUrlQueryState";
 import type { SortDir } from "@/types/segments";
 import { SegmentTable } from "./components/SegmentTable";
 
@@ -18,9 +19,13 @@ export default function SegmentsPage() {
   const navigate = useNavigate();
   const { units } = useSettings();
 
-  const [q, setQ] = useState("");
-  const [direction, setDirection] = useState<SortDir>("desc");
-  const [page, setPage] = useState(1);
+  // List state lives in the URL so opening a segment and pressing Back restores
+  // exactly what was on screen (also refresh-safe and shareable).
+  const [params, setParams] = useUrlQueryState();
+  const q = params.get("q") ?? "";
+  const direction: SortDir = params.get("dir") === "asc" ? "asc" : "desc";
+  const page = Number(params.get("page")) || 1;
+
   const [asOf, setAsOf] = useState<string | null>(null);
   const dq = useDebouncedValue(q, 300);
 
@@ -45,8 +50,9 @@ export default function SegmentsPage() {
   const rows = (data?.segments ?? []).map((s) => toSegmentRow(s, units));
   const emptyMessage = rows.length > 0 ? null : "No segments match your search.";
 
-  const handleQ = (v: string) => { setQ(v); setPage(1); };
-  const handleSort = () => { setDirection((d) => (d === "asc" ? "desc" : "asc")); setPage(1); };
+  const handleQ = (v: string) => setParams({ q: v, page: null });
+  const handleSort = () => setParams({ dir: direction === "asc" ? "desc" : "asc", page: null });
+  const handlePage = (p: number) => setParams({ page: p === 1 ? null : p });
 
   const handleLogout = async () => { await logout(); navigate("/", { replace: true }); };
 
@@ -83,7 +89,7 @@ export default function SegmentsPage() {
               totalPages={data?.total_pages ?? 1}
               total={total}
               pageSize={data?.page_size ?? 10}
-              onPage={setPage}
+              onPage={handlePage}
               noun="segments"
             />
           </>

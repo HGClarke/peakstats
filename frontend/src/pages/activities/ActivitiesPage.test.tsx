@@ -55,6 +55,10 @@ function renderPage() {
   renderWithProviders(<MemoryRouter><ActivitiesPage /></MemoryRouter>);
 }
 
+function renderPageAt(url: string) {
+  renderWithProviders(<MemoryRouter initialEntries={[url]}><ActivitiesPage /></MemoryRouter>);
+}
+
 beforeEach(() => {
   useAthlete.mockReturnValue({ data: athlete, isLoading: false, error: null });
   useSyncStatus.mockReturnValue({ data: synced });
@@ -123,6 +127,13 @@ describe("ActivitiesPage", () => {
     renderPage();
     await waitFor(() =>
       expect(mockNavigate).toHaveBeenCalledWith("/sync", { replace: true }));
+  });
+
+  it("reads initial page, search, and sort from the URL", () => {
+    renderPageAt("/activities?page=2&q=loop&sort=distance&dir=asc");
+    expect(lastQuery()).toMatchObject({
+      page: 2, q: "loop", sort: "distance", direction: "asc",
+    });
   });
 
   it("resets to page 1 when the sort changes", () => {

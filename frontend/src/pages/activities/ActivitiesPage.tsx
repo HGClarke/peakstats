@@ -6,6 +6,7 @@ import { useSyncStatus } from "@/api/sync";
 import { useSettings } from "@/app/providers/settings-context";
 import { AppShell } from "@/components/app-shell/AppShell";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
+import { useUrlQueryState } from "@/lib/useUrlQueryState";
 import type { SortField } from "@/types/activities";
 import { Pager } from "@/components/Pager";
 import { ActivityFilterBar } from "./components/ActivityFilterBar";
@@ -30,13 +31,17 @@ export default function ActivitiesPage() {
   const navigate = useNavigate();
   const { units } = useSettings();
 
-  const [q, setQ] = useState("");
-  const [minDist, setMinDist] = useState("");
-  const [minTime, setMinTime] = useState("");
-  const [minElev, setMinElev] = useState("");
-  const [sort, setSort] = useState<SortField>("date");
-  const [direction, setDirection] = useState<"asc" | "desc">("desc");
-  const [page, setPage] = useState(1);
+  // List state lives in the URL so navigating into a ride and pressing Back
+  // restores exactly what was on screen (also refresh-safe and shareable).
+  const [params, setParams] = useUrlQueryState();
+  const q = params.get("q") ?? "";
+  const minDist = params.get("min_dist") ?? "";
+  const minTime = params.get("min_time") ?? "";
+  const minElev = params.get("min_elev") ?? "";
+  const sort = (params.get("sort") as SortField | null) ?? "date";
+  const direction = params.get("dir") === "asc" ? "asc" : "desc";
+  const page = Number(params.get("page")) || 1;
+
   const [asOf, setAsOf] = useState<string | null>(null);
 
   const dq = useDebouncedValue(q, 300);
@@ -68,23 +73,19 @@ export default function ActivitiesPage() {
   const synced = status?.status === "idle";
 
   const handleSort = (field: SortField) => {
-    if (field === sort) {
-      setDirection((d) => (d === "asc" ? "desc" : "asc"));
-    } else {
-      setSort(field);
-      setDirection("desc");
-    }
-    setPage(1);
+    const dir = field === sort ? (direction === "asc" ? "desc" : "asc") : "desc";
+    setParams({ sort: field, dir, page: null });
   };
 
-  const handleQ = (v: string) => { setQ(v); setPage(1); };
-  const handleMinDist = (v: string) => { setMinDist(v); setPage(1); };
-  const handleMinTime = (v: string) => { setMinTime(v); setPage(1); };
-  const handleMinElev = (v: string) => { setMinElev(v); setPage(1); };
+  const handleQ = (v: string) => setParams({ q: v, page: null });
+  const handleMinDist = (v: string) => setParams({ min_dist: v, page: null });
+  const handleMinTime = (v: string) => setParams({ min_time: v, page: null });
+  const handleMinElev = (v: string) => setParams({ min_elev: v, page: null });
 
-  const handleClear = () => {
-    setQ(""); setMinDist(""); setMinTime(""); setMinElev(""); setPage(1);
-  };
+  const handleClear = () =>
+    setParams({ q: null, min_dist: null, min_time: null, min_elev: null, page: null });
+
+  const handlePage = (p: number) => setParams({ page: p === 1 ? null : p });
 
   const handleLogout = async () => { await logout(); navigate("/", { replace: true }); };
   const handleDisconnect = async () => { await disconnect(); navigate("/", { replace: true }); };
@@ -126,7 +127,7 @@ export default function ActivitiesPage() {
               totalPages={data?.total_pages ?? 1}
               total={total}
               pageSize={data?.page_size ?? 9}
-              onPage={setPage}
+              onPage={handlePage}
               noun="activities"
             />
           </>

@@ -39,6 +39,9 @@ function dto(over: Partial<SegmentListDTO> = {}): SegmentListDTO {
 }
 function lastQuery(): SegmentsQuery { return useSegments.mock.calls.at(-1)![0] as SegmentsQuery; }
 function renderPage() { renderWithProviders(<MemoryRouter><SegmentsPage /></MemoryRouter>); }
+function renderPageAt(url: string) {
+  renderWithProviders(<MemoryRouter initialEntries={[url]}><SegmentsPage /></MemoryRouter>);
+}
 
 beforeEach(() => {
   useAthlete.mockReturnValue({ data: athlete, error: null });
@@ -96,6 +99,11 @@ describe("SegmentsPage", () => {
     renderPage();
     await waitFor(() => expect(useSegments.mock.calls[0][0]).toMatchObject({ asOf: null }));
     await waitFor(() => expect(lastQuery().asOf).toBe("2026-06-21T12:00:00Z"));
+  });
+
+  it("reads initial page, search, and direction from the URL", () => {
+    renderPageAt("/segments?page=2&q=river&dir=asc");
+    expect(lastQuery()).toMatchObject({ page: 2, q: "river", direction: "asc" });
   });
 
   it("resets to page 1 when the sort toggles", () => {
