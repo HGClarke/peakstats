@@ -64,3 +64,12 @@ it("typing into Max HR and blurring calls patchSettings with hr_max", async () =
   fireEvent.blur(input);
   await waitFor(() => expect(patchSettings).toHaveBeenCalledWith({ hr_max: 185 }));
 });
+
+it("typing a weekly goal blurs and patches weekly_goal_m in meters", async () => {
+  renderPage();
+  const input = screen.getByRole("spinbutton", { name: "Weekly distance goal" });
+  fireEvent.change(input, { target: { value: "120" } });
+  fireEvent.blur(input);
+  // metric default units → 120 km = 120000 m
+  await waitFor(() => expect(patchSettings).toHaveBeenCalledWith({ weekly_goal_m: 120000 }));
+});

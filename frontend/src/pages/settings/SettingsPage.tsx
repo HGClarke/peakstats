@@ -7,6 +7,7 @@ import { useSyncStatus } from "@/api/sync";
 import { AppShell } from "@/components/app-shell/AppShell";
 import { SegmentedControl } from "./components/SegmentedControl";
 import { DisconnectCard } from "./components/DisconnectCard";
+import { distanceToMeters, distanceUnit, distanceValue } from "@/lib/units";
 
 const section = "bg-surface-card border border-line rounded-[14px] p-[18px_20px] mb-4";
 const heading = "font-display font-medium text-[15px] mb-1";
@@ -21,6 +22,8 @@ export default function SettingsPage() {
   const handleLogout = async () => { await logout(); navigate("/", { replace: true }); };
   const ftp = (athlete?.settings as { ftp_w?: number })?.ftp_w ?? "";
   const hrMax = (athlete?.settings as { hr_max?: number })?.hr_max ?? "";
+  const goalMeters = (athlete?.settings as { weekly_goal_m?: number })?.weekly_goal_m;
+  const goalDisplay = goalMeters === undefined ? "" : distanceValue(goalMeters, units);
 
   return (
     <AppShell
@@ -71,6 +74,26 @@ export default function SettingsPage() {
                 className="w-[120px] bg-surface-inset border border-line rounded-[8px] px-3 py-2 text-ink text-[14px]" />
             </label>
           </div>
+        </div>
+
+        <div className={section}>
+          <div className={heading}>Goals</div>
+          <div className={sub}>Your weekly distance target powers the goal ring on Overview.</div>
+          <label className="flex flex-col gap-1 text-[12px] text-subtle">
+            Weekly distance goal ({distanceUnit(units)})
+            <input
+              type="number"
+              defaultValue={goalDisplay}
+              aria-label="Weekly distance goal"
+              onBlur={(e) =>
+                e.target.value &&
+                patchSettings({ weekly_goal_m: Math.round(distanceToMeters(Number(e.target.value), units)) })
+                  .then((updated) => queryClient.setQueryData(["athlete"], updated))
+                  .catch(() => {})
+              }
+              className="w-[120px] bg-surface-inset border border-line rounded-[8px] px-3 py-2 text-ink text-[14px]"
+            />
+          </label>
         </div>
 
         <div className={section}>
