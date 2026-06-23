@@ -117,11 +117,11 @@ A few decisions worth calling out:
 
 | Layer | Stack |
 |---|---|
-| **Frontend** | Vite · React 19 · TypeScript · Tailwind CSS v4 · shadcn/ui · TanStack Query · React Router · Leaflet · Recharts |
-| **Backend** | Python 3.12 · FastAPI · Pydantic · httpx · itsdangerous (signed sessions) · Supabase Python client |
+| **Frontend** | Vite · React 19  · Tailwind CSS v4 |
+| **Backend** | Python 3.12 · FastAPI |
 | **Data / Auth** | Supabase Postgres + Row-Level Security · Strava OAuth 2.0 |
-| **Hosting** | Vercel (SPA) · Render (API) · Supabase (database) |
-| **Testing** | pytest (193 backend tests) · Vitest + React Testing Library (38 frontend suites) |
+| **Hosting** | Vercel (SPA) · Render (API) · Supabase |
+| **Testing** | pytest · Vitest + React Testing Library |
 
 ## License
 
