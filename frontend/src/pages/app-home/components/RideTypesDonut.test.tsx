@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { RideTypesDonut, donutSegments } from "./RideTypesDonut";
+import { RideTypesDonut } from "./RideTypesDonut";
+import { donutSegments } from "./donutSegments";
 
 const DATA = {
   total: 5,
