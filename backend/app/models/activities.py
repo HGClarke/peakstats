@@ -8,6 +8,16 @@ SortDir = Literal["asc", "desc"]
 Period = Literal["week", "month", "year"]
 
 
+class HeatmapDay(BaseModel):
+    date: str          # local ride day, "YYYY-MM-DD"
+    distance_m: float
+
+
+class HeatmapData(BaseModel):
+    year: int
+    days: list[HeatmapDay]
+
+
 class PeriodTotals(BaseModel):
     distance_m: float
     elev_gain_m: float
@@ -52,6 +62,8 @@ class OverviewResponse(BaseModel):
     summary: OverviewSummary
     ride_types: list[RideTypeCount]
     recent_rides: list[RecentRideItem]
+    heatmap: HeatmapData
+    week_distance_m: float
 
 
 class ActivityListItem(BaseModel):

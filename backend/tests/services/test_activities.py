@@ -226,3 +226,30 @@ def test_overview_recent_ride_exposes_start_date_local(monkeypatch):
     _patch(monkeypatch, [], [ride])
     ov = activities_service.get_overview(object(), 7, period="week", now=NOW)
     assert ov.recent_rides[0].start_date_local == "2026-06-20T23:00:00Z"
+
+
+def test_heatmap_buckets_current_year_active_days(monkeypatch):
+    rows = [
+        _row(1, "2026-01-02T10:00:00", 12000.0, 1000, 0.0, 8.0),
+        _row(2, "2026-01-02T15:00:00", 8000.0, 800, 0.0, 8.0),    # same day → sums
+        _row(3, "2025-12-31T10:00:00", 9000.0, 900, 0.0, 8.0),    # last year → excluded
+    ]
+    _patch(monkeypatch, rows, [])
+    ov = activities_service.get_overview(object(), 7, period="year", now=NOW)
+    assert ov.heatmap.year == 2026
+    assert {d.date: d.distance_m for d in ov.heatmap.days} == {"2026-01-02": 20000.0}
+
+
+def test_week_distance_is_current_week_regardless_of_period(monkeypatch):
+    _patch(monkeypatch, THIS_WEEK + LAST_WEEK, [])
+    for period in ("week", "month", "year"):
+        ov = activities_service.get_overview(object(), 7, period=period, now=NOW)
+        assert ov.week_distance_m == 30000.0
+
+
+def test_heatmap_and_week_distance_empty_safe(monkeypatch):
+    _patch(monkeypatch, [], [])
+    ov = activities_service.get_overview(object(), 7, period="week", now=NOW)
+    assert ov.heatmap.days == []
+    assert ov.heatmap.year == 2026
+    assert ov.week_distance_m == 0.0

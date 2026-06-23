@@ -14,6 +14,8 @@ from app.models.activities import (
     ActivityListResponse,
     ActivityStreamsResponse,
     ClimbItem,
+    HeatmapData,
+    HeatmapDay,
     OverviewResponse,
     OverviewSummary,
     Period,
@@ -144,6 +146,22 @@ def _ride_types(rows: list[ActivityRow]) -> list[RideTypeCount]:
     return [RideTypeCount(type=t, count=c) for t, c in ordered]
 
 
+def _heatmap(rows: list[ActivityRow], year: int) -> HeatmapData:
+    by_day: dict[str, float] = {}
+    for r in rows:
+        d = _local_naive(r)
+        if d.year != year:
+            continue
+        key = d.date().isoformat()
+        by_day[key] = by_day.get(key, 0.0) + r["distance_m"]
+    days = [
+        HeatmapDay(date=k, distance_m=round(v, 1))
+        for k, v in sorted(by_day.items())
+        if v > 0
+    ]
+    return HeatmapData(year=year, days=days)
+
+
 def get_overview(
     supabase: Client,
     athlete_id: int,
@@ -156,11 +174,15 @@ def get_overview(
     now_local = (now or datetime.now(UTC)).astimezone(zone)
     base = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
     this_start, this_end, last_start = _period_bounds(base, period)
+    year_start = base.replace(month=1, day=1)
+    week_start = base - timedelta(days=base.weekday())
 
-    # Rows are queried by UTC start_date, which can sit up to ~14h off the local
-    # date, so widen the query a day and filter precisely by local time below.
+    # One widened query feeds the period totals, the current-week distance, and the
+    # full-year heatmap. Query by UTC start_date (can sit ~14h off local), so go back
+    # an extra day and filter precisely by local time below.
+    query_start = min(year_start, last_start) - timedelta(days=1)
     rows = activities_db.list_activities_since(
-        supabase, athlete_id, (last_start - timedelta(days=1)).isoformat()
+        supabase, athlete_id, query_start.isoformat()
     )
 
     ts, te, ls = (
@@ -170,6 +192,8 @@ def get_overview(
     )
     this_rows = [r for r in rows if ts <= _local_naive(r) < te]
     last_rows = [r for r in rows if ls <= _local_naive(r) < ts]
+    ws, we = week_start.replace(tzinfo=None), (week_start + timedelta(days=7)).replace(tzinfo=None)
+    week_distance_m = sum(r["distance_m"] for r in rows if ws <= _local_naive(r) < we)
 
     recent = activities_db.list_recent_activities(supabase, athlete_id, RECENT_LIMIT)
     recent_rides = [
@@ -189,6 +213,8 @@ def get_overview(
         summary=_summary(this_rows),
         ride_types=_ride_types(this_rows),
         recent_rides=recent_rides,
+        heatmap=_heatmap(rows, base.year),
+        week_distance_m=week_distance_m,
     )
 
 

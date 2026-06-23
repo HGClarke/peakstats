@@ -5,6 +5,7 @@ from app.models.activities import (
     ActivityListItem,
     ActivityListResponse,
     ActivityStreamsResponse,
+    HeatmapData,
     OverviewResponse,
     OverviewSummary,
     PeriodTotals,
@@ -34,6 +35,8 @@ def _overview() -> OverviewResponse:
         recent_rides=[RecentRideItem(id=1, name="Tue ride", type="Ride",
                                      start_date="2026-06-16T10:00:00Z",
                                      distance_m=10000.0, moving_time_s=1000)],
+        heatmap=HeatmapData(year=2026, days=[]),
+        week_distance_m=30000.0,
     )
 
 
@@ -73,13 +76,19 @@ def test_overview_passes_period(client, monkeypatch):
     def fake_overview(supabase, athlete_id, *, tz="UTC", period="week", now=None):
         captured["tz"] = tz
         captured["period"] = period
-        from app.models.activities import OverviewResponse, OverviewSummary, PeriodTotals
+        from app.models.activities import (
+            HeatmapData,
+            OverviewResponse,
+            OverviewSummary,
+            PeriodTotals,
+        )
         zero = PeriodTotals(distance_m=0, elev_gain_m=0, moving_time_s=0, avg_speed_ms=None)
         return OverviewResponse(
             period=period, this_period=zero, last_period=zero, trend=[],
             summary=OverviewSummary(rides=0, prs=0, top_speed_ms=None,
                                     longest_ride_m=0, max_elev_m=0),
             ride_types=[], recent_rides=[],
+            heatmap=HeatmapData(year=2026, days=[]), week_distance_m=0.0,
         )
 
     monkeypatch.setattr("app.routers.activities.activities_service.get_overview", fake_overview)
@@ -95,13 +104,19 @@ def test_overview_defaults_to_week(client, monkeypatch):
 
     def fake_overview(supabase, athlete_id, *, tz="UTC", period="week", now=None):
         captured["period"] = period
-        from app.models.activities import OverviewResponse, OverviewSummary, PeriodTotals
+        from app.models.activities import (
+            HeatmapData,
+            OverviewResponse,
+            OverviewSummary,
+            PeriodTotals,
+        )
         zero = PeriodTotals(distance_m=0, elev_gain_m=0, moving_time_s=0, avg_speed_ms=None)
         return OverviewResponse(
             period=period, this_period=zero, last_period=zero, trend=[],
             summary=OverviewSummary(rides=0, prs=0, top_speed_ms=None,
                                     longest_ride_m=0, max_elev_m=0),
             ride_types=[], recent_rides=[],
+            heatmap=HeatmapData(year=2026, days=[]), week_distance_m=0.0,
         )
 
     monkeypatch.setattr("app.routers.activities.activities_service.get_overview", fake_overview)
