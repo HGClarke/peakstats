@@ -61,10 +61,10 @@
     --zone-4: #a16207; --zone-5: #c2410c; --zone-6: #d9534f; --zone-7: #b91c1c;
 
     /* Climb category badge — light */
-    --cat-1: #c2410c; --cat-hc: #dc2626;
+    --cat-4: #2563c2; --cat-3: #0f9d58; --cat-2: #a16207; --cat-1: #c2410c; --cat-hc: #dc2626;
 
-    /* Ride-type palette — theme-invariant saturated values (cat-2..5); cat-2..4 also used by climb badges */
-    --cat-2: #3b82f6; --cat-3: #22c55e; --cat-4: #a855f7; --cat-5: #eab308;
+    /* Ride-type palette — theme-invariant saturated values (ride-2..5) */
+    --ride-2: #3b82f6; --ride-3: #22c55e; --ride-4: #a855f7; --ride-5: #eab308;
 
     /* Grade text color — light */
     --grade-descent: #5b6675; --grade-green: #0f9d58; --grade-yellow: #a16207;
@@ -128,10 +128,10 @@
     --zone-4: #eab308; --zone-5: #f59e0b; --zone-6: #fc4c02; --zone-7: #ef4444;
 
     /* Climb category badge — dark */
-    --cat-1: #f59e0b; --cat-hc: #ef4444;
+    --cat-4: #60a5fa; --cat-3: #34d399; --cat-2: #eab308; --cat-1: #f59e0b; --cat-hc: #ef4444;
 
-    /* Ride-type palette — theme-invariant saturated values (cat-2..5); cat-2..4 also used by climb badges */
-    --cat-2: #3b82f6; --cat-3: #22c55e; --cat-4: #a855f7; --cat-5: #eab308;
+    /* Ride-type palette — theme-invariant saturated values (ride-2..5) */
+    --ride-2: #3b82f6; --ride-3: #22c55e; --ride-4: #a855f7; --ride-5: #eab308;
 
     /* Grade text color — dark */
     --grade-descent: #8a909a; --grade-green: #34d399; --grade-yellow: #eab308;
@@ -223,13 +223,18 @@
   --color-zone-6: var(--zone-6);
   --color-zone-7: var(--zone-7);
 
-  /* Climb category badge tokens + ride-type palette */
+  /* Climb category badge tokens */
   --color-cat-4: var(--cat-4);
   --color-cat-3: var(--cat-3);
   --color-cat-2: var(--cat-2);
   --color-cat-1: var(--cat-1);
   --color-cat-hc: var(--cat-hc);
-  --color-cat-5: var(--cat-5);
+
+  /* Ride-type palette tokens */
+  --color-ride-2: var(--ride-2);
+  --color-ride-3: var(--ride-3);
+  --color-ride-4: var(--ride-4);
+  --color-ride-5: var(--ride-5);
 
   /* Grade text color tokens */
   --color-grade-descent: var(--grade-descent);

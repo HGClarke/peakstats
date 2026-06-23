@@ -13,8 +13,8 @@ import {
 
 /** Ride-type palette — CSS vars defined in index.css (both themes). */
 const TYPE_COLORS = [
-  "var(--color-strava)", "var(--color-cat-2)", "var(--color-cat-3)",
-  "var(--color-cat-4)", "var(--color-cat-5)",
+  "var(--color-strava)", "var(--color-ride-2)", "var(--color-ride-3)",
+  "var(--color-ride-4)", "var(--color-ride-5)",
 ];
 const DEFAULT_DOT = "var(--color-strava)";
 

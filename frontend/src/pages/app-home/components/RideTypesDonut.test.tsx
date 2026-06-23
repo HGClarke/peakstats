@@ -6,7 +6,7 @@ const DATA = {
   total: 5,
   items: [
     { type: "Ride", label: "Ride", pct: "80%", fraction: 0.8, color: "var(--color-strava)" },
-    { type: "VirtualRide", label: "VirtualRide", pct: "20%", fraction: 0.2, color: "var(--color-cat-2)" },
+    { type: "VirtualRide", label: "VirtualRide", pct: "20%", fraction: 0.2, color: "var(--color-ride-2)" },
   ],
 };
 
