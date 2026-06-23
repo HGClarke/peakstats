@@ -82,9 +82,7 @@ export function toOverview(dto: OverviewDTO, units: Units): DashboardOverview {
     summary: {
       rides: String(dto.summary.rides),
       prs: String(dto.summary.prs),
-      topSpeed: dto.summary.top_speed_ms === null
-        ? "—"
-        : `${dto.summary.top_speed_ms.toFixed(1)} ${units === "imperial" ? "mph" : "km/h"}`,
+      topSpeed: dto.summary.top_speed_ms === null ? "—" : speedLabel(dto.summary.top_speed_ms, units),
       longestRide: distanceLabel(dto.summary.longest_ride_m, units),
       maxElev: elevationLabel(dto.summary.max_elev_m, units),
     },

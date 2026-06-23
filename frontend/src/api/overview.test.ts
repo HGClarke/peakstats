@@ -45,7 +45,7 @@ describe("toOverview", () => {
   it("formats summary records", () => {
     const { summary } = toOverview(DTO, "metric");
     expect(summary).toMatchObject({
-      rides: "6", prs: "2", topSpeed: "11.0 km/h",
+      rides: "6", prs: "2", topSpeed: "39.6 km/h",
       longestRide: "64.0 km", maxElev: "980 m",
     });
   });
@@ -67,5 +67,6 @@ describe("toOverview", () => {
   it("imperial summary uses miles", () => {
     const { summary } = toOverview(DTO, "imperial");
     expect(summary.longestRide).toBe("39.8 mi");
+    expect(summary.topSpeed).toBe("24.6 mph");
   });
 });
