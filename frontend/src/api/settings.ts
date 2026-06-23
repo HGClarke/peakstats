@@ -7,6 +7,7 @@ export type SettingsPatch = {
   theme?: "dark" | "light";
   ftp_w?: number;
   hr_max?: number;
+  weekly_goal_m?: number;
 };
 
 /** Persist a partial settings update; resolves with the updated athlete. */

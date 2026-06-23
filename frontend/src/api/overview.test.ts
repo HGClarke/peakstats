@@ -19,6 +19,8 @@ const DTO: OverviewDTO = {
     { id: 1, name: "River loop", type: "Ride", start_date: "2026-06-16T07:42:00Z",
       start_date_local: "2026-06-16T07:42:00Z", distance_m: 38700, moving_time_s: 5662, is_pr: true },
   ],
+  heatmap: { year: 2026, days: [{ date: "2026-06-16", distance_m: 38700 }] },
+  week_distance_m: 38700,
 };
 
 describe("toOverview", () => {
@@ -68,5 +70,54 @@ describe("toOverview", () => {
     const { summary } = toOverview(DTO, "imperial");
     expect(summary.longestRide).toBe("39.8 mi");
     expect(summary.topSpeed).toBe("24.6 mph");
+  });
+
+  it("builds a full-year heatmap with distance levels and range sentinels", () => {
+    const dto: OverviewDTO = {
+      ...DTO,
+      heatmap: {
+        year: 2026,
+        days: [
+          { date: "2026-03-10", distance_m: 9000 },   // <10k → level 1
+          { date: "2026-03-11", distance_m: 10000 },  // <25k → level 2
+          { date: "2026-03-12", distance_m: 25000 },  // <50k → level 3
+          { date: "2026-03-13", distance_m: 50000 },  // ≥50k → level 4
+        ],
+      },
+    };
+    const { heatmap } = toOverview(dto, "metric", 100000);
+    expect(heatmap.year).toBe(2026);
+    expect(heatmap.activeDays).toBe(4);
+    const lvl = Object.fromEntries(heatmap.data.map((d) => [d.date, d.level]));
+    expect(lvl["2026-03-10"]).toBe(1);
+    expect(lvl["2026-03-11"]).toBe(2);
+    expect(lvl["2026-03-12"]).toBe(3);
+    expect(lvl["2026-03-13"]).toBe(4);
+    expect(lvl["2026-01-01"]).toBe(0); // range forced
+    expect(lvl["2026-12-31"]).toBe(0);
+  });
+
+  it("builds the goal view with pct, labels, and remaining", () => {
+    const { goal } = toOverview({ ...DTO, week_distance_m: 64000 }, "metric", 100000);
+    expect(goal).toMatchObject({
+      pct: 64, pctLabel: "64%", doneLabel: "64.0",
+      targetLabel: "100.0", unit: "km", remainingLabel: "36.0",
+    });
+  });
+
+  it("caps goal pct at 100 and floors remaining at 0", () => {
+    const { goal } = toOverview({ ...DTO, week_distance_m: 120000 }, "metric", 100000);
+    expect(goal.pct).toBe(100);
+    expect(goal.remainingLabel).toBe("0.0");
+  });
+
+  it("falls back to the default goal when none is set", () => {
+    const { goal } = toOverview({ ...DTO, week_distance_m: 50000 }, "metric", undefined);
+    expect(goal.targetLabel).toBe("100.0"); // DEFAULT_WEEKLY_GOAL_M
+  });
+
+  it("imperial goal uses miles", () => {
+    const { goal } = toOverview({ ...DTO, week_distance_m: 0 }, "imperial", 100000);
+    expect(goal).toMatchObject({ unit: "mi", targetLabel: "62.1" });
   });
 });

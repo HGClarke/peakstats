@@ -2,6 +2,7 @@ export type AthleteSettings = {
   units: string;
   theme: string;
   default_period: string;
+  weekly_goal_m?: number;
 };
 
 export type Athlete = {

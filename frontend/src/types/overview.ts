@@ -36,6 +36,16 @@ export interface RecentRideDTO {
   is_pr: boolean;
 }
 
+export interface HeatmapDayDTO {
+  date: string; // "YYYY-MM-DD"
+  distance_m: number;
+}
+
+export interface HeatmapDTO {
+  year: number;
+  days: HeatmapDayDTO[];
+}
+
 export interface OverviewDTO {
   period: Period;
   this_period: PeriodTotalsDTO;
@@ -44,6 +54,8 @@ export interface OverviewDTO {
   summary: OverviewSummaryDTO;
   ride_types: RideTypeCountDTO[];
   recent_rides: RecentRideDTO[];
+  heatmap: HeatmapDTO;
+  week_distance_m: number;
 }
 
 /** Display shapes the Overview renders (formatted, units applied). */
@@ -86,6 +98,27 @@ export interface RideTypesView {
   items: RideTypeSlice[];
 }
 
+export interface HeatmapCell {
+  date: string;   // "YYYY-MM-DD"
+  count: number;  // distance in meters (tooltip formats it)
+  level: number;  // 0..4
+}
+
+export interface HeatmapView {
+  year: number;
+  activeDays: number;
+  data: HeatmapCell[]; // full-year, zero-filled, range-forced
+}
+
+export interface GoalView {
+  pct: number;            // 0..100, capped
+  pctLabel: string;       // "64%"
+  doneLabel: string;      // "64.0"  (value only)
+  targetLabel: string;    // "100.0"
+  unit: string;           // "km" | "mi"
+  remainingLabel: string; // "36.0"
+}
+
 export interface DashRide {
   id: number;
   name: string;
@@ -105,4 +138,6 @@ export interface DashboardOverview {
   summary: SummaryView;
   rideTypes: RideTypesView;
   recentRides: DashRide[];
+  heatmap: HeatmapView;
+  goal: GoalView;
 }

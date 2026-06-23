@@ -1,11 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import type {
-  DashboardOverview, DashRide, Kpi, OverviewDTO, Period,
-  RecentRideDTO, RideTypeSlice,
+  DashboardOverview, DashRide, GoalView, HeatmapDTO, HeatmapView, Kpi,
+  OverviewDTO, Period, RecentRideDTO, RideTypeSlice,
 } from "@/types/overview";
 import { apiFetch } from "./client";
 import { fmtDate, fmtDuration } from "@/lib/format";
 import { useSettings } from "@/app/providers/settings-context";
+import { useAthlete } from "./auth";
 import {
   distanceLabel, distanceUnit, distanceValue, elevationLabel, fmtDistance,
   fmtElevation, fmtSpeed, speedLabel, type Units,
@@ -38,7 +39,47 @@ function toRide(r: RecentRideDTO, units: Units, colorByType: Map<string, string>
   };
 }
 
-export function toOverview(dto: OverviewDTO, units: Units): DashboardOverview {
+export const DEFAULT_WEEKLY_GOAL_M = 100_000; // 100 km
+
+function heatLevel(meters: number): number {
+  if (meters <= 0) return 0;
+  if (meters < 10_000) return 1;
+  if (meters < 25_000) return 2;
+  if (meters < 50_000) return 3;
+  return 4;
+}
+
+function buildHeatmapView(dto: HeatmapDTO): HeatmapView {
+  const byDate = new Map<string, number>();
+  for (const d of dto.days) byDate.set(d.date, d.distance_m);
+  // Force the calendar to span the whole year even with sparse data.
+  for (const sentinel of [`${dto.year}-01-01`, `${dto.year}-12-31`]) {
+    if (!byDate.has(sentinel)) byDate.set(sentinel, 0);
+  }
+  const data = [...byDate.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, meters]) => ({ date, count: Math.round(meters), level: heatLevel(meters) }));
+  return { year: dto.year, activeDays: dto.days.length, data };
+}
+
+function buildGoalView(weekDistanceM: number, weeklyGoalM: number | undefined, units: Units): GoalView {
+  const target = weeklyGoalM ?? DEFAULT_WEEKLY_GOAL_M;
+  const pct = target > 0 ? Math.min(100, Math.round((weekDistanceM / target) * 100)) : 0;
+  const remaining = Math.max(0, target - weekDistanceM);
+  const done = fmtDistance(weekDistanceM, units);
+  const tgt = fmtDistance(target, units);
+  const rem = fmtDistance(remaining, units);
+  return {
+    pct,
+    pctLabel: `${pct}%`,
+    doneLabel: done.value,
+    targetLabel: tgt.value,
+    unit: tgt.unit,
+    remainingLabel: rem.value,
+  };
+}
+
+export function toOverview(dto: OverviewDTO, units: Units, weeklyGoalM?: number): DashboardOverview {
   const t = dto.this_period;
   const l = dto.last_period;
   const noun = PERIOD_NOUN[dto.period];
@@ -88,6 +129,8 @@ export function toOverview(dto: OverviewDTO, units: Units): DashboardOverview {
     },
     rideTypes: { total, items },
     recentRides: dto.recent_rides.map((r) => toRide(r, units, colorByType)),
+    heatmap: buildHeatmapView(dto.heatmap),
+    goal: buildGoalView(dto.week_distance_m, weeklyGoalM, units),
   };
 }
 
@@ -102,11 +145,13 @@ export const OVERVIEW_REFETCH_INTERVAL_MS = 60_000;
 
 export function useOverview(period: Period) {
   const { units } = useSettings();
+  const { data: athlete } = useAthlete();
+  const weeklyGoalM = athlete?.settings.weekly_goal_m;
   return useQuery({
     queryKey: ["activities", "overview", period] as const,
     queryFn: () => fetchOverview(period),
     refetchOnWindowFocus: true,
     refetchInterval: OVERVIEW_REFETCH_INTERVAL_MS,
-    select: (dto: OverviewDTO) => toOverview(dto, units),
+    select: (dto: OverviewDTO) => toOverview(dto, units, weeklyGoalM),
   });
 }
