@@ -91,6 +91,27 @@ def test_update_settings_returns_none_when_missing(monkeypatch):
     assert athletes.update_settings(object(), 7, SettingsUpdate(theme="light")) is None
 
 
+def test_update_settings_merges_weekly_goal(monkeypatch):
+    from app.models.athlete import SettingsUpdate
+
+    written = {}
+    monkeypatch.setattr(
+        athletes.athletes_db, "get_athlete",
+        lambda supabase, athlete_id: {
+            "id": 7, "name": "Ada", "avatar_url": None,
+            "settings": {"units": "metric", "theme": "dark", "default_period": "week"},
+        },
+    )
+    monkeypatch.setattr(
+        athletes.athletes_db, "update_settings",
+        lambda supabase, athlete_id, settings: written.update(settings)
+        or {"id": 7, "name": "Ada", "avatar_url": None, "settings": settings},
+    )
+    result = athletes.update_settings(object(), 7, SettingsUpdate(weekly_goal_m=120000))
+    assert written["weekly_goal_m"] == 120000
+    assert result is not None and result.settings["weekly_goal_m"] == 120000
+
+
 def test_update_settings_returns_none_when_row_vanishes_after_get(monkeypatch):
     from app.models.athlete import SettingsUpdate
 

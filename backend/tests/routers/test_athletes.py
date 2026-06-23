@@ -103,3 +103,19 @@ def test_patch_settings_accepts_ftp_and_hr(client, monkeypatch):
     _auth(client)
     r = client.patch("/athlete/settings", json={"ftp_w": 280, "hr_max": 190})
     assert r.status_code == 200 and captured == {"ftp": 280, "hr": 190}
+
+
+def test_patch_settings_accepts_weekly_goal(client, monkeypatch):
+    from app.services import athletes as athletes_service
+    captured = {}
+
+    def fake(supabase, athlete_id, patch):
+        captured["goal"] = patch.weekly_goal_m
+        from app.models.athlete import AthleteResponse
+        return AthleteResponse(id=athlete_id, name="A", avatar_url=None,
+                               settings={"weekly_goal_m": patch.weekly_goal_m})
+
+    monkeypatch.setattr(athletes_service, "update_settings", fake)
+    _auth(client)
+    r = client.patch("/athlete/settings", json={"weekly_goal_m": 120000})
+    assert r.status_code == 200 and captured == {"goal": 120000}
