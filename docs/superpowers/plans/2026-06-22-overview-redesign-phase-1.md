@@ -40,7 +40,7 @@
 - Modify `frontend/src/pages/app-home/components/RecentRidesPanel.tsx`.
 - Modify `frontend/src/pages/app-home/AppHome.tsx`.
 - Modify `frontend/src/index.css` — ride-type palette tokens.
-- Delete `frontend/src/components/WeekChart.tsx`, `frontend/src/pages/app-home/components/KpiCards.tsx`, `frontend/src/pages/app-home/components/DistancePanel.tsx`.
+- Delete `frontend/src/pages/app-home/components/KpiCards.tsx`, `frontend/src/pages/app-home/components/DistancePanel.tsx`. (Keep `frontend/src/components/WeekChart.tsx` — still used by the landing-page `DashboardPreview.tsx`.)
 - Modify `frontend/src/api/overview.test.ts`, `frontend/src/pages/app-home/AppHome.test.tsx`; create component tests where logic exists.
 
 ---
@@ -725,8 +725,8 @@ import {
 
 /** Ride-type palette — CSS vars defined in index.css (both themes). */
 const TYPE_COLORS = [
-  "var(--color-strava)", "var(--color-cat-2)", "var(--color-cat-3)",
-  "var(--color-cat-4)", "var(--color-cat-5)",
+  "var(--color-strava)", "var(--color-ride-2)", "var(--color-ride-3)",
+  "var(--color-ride-4)", "var(--color-ride-5)",
 ];
 const DEFAULT_DOT = "var(--color-strava)";
 
@@ -937,12 +937,16 @@ git commit -m "feat(overview): PeriodSelector segmented control"
 
 ---
 
-## Task 5: Frontend — TrendChart (replaces WeekChart)
+## Task 5: Frontend — TrendChart (new period trend chart)
 
 **Files:**
 - Create: `frontend/src/pages/app-home/components/TrendChart.tsx`
-- Delete: `frontend/src/components/WeekChart.tsx`
 - Test: `frontend/src/pages/app-home/components/TrendChart.test.tsx`
+
+> NOTE (correction): `WeekChart.tsx` is NOT deleted — the landing page's
+> `DashboardPreview.tsx` still imports it. TrendChart is a new component that
+> coexists with WeekChart. The Overview uses TrendChart; the landing preview
+> keeps WeekChart.
 
 **Interfaces:**
 - Consumes: `TrendPoint[]` (`{ label, value }`), `isDark`, `unit`.
@@ -1054,19 +1058,13 @@ export function TrendChart({
 Run: `cd frontend && npx vitest run src/pages/app-home/components/TrendChart.test.tsx`
 Expected: PASS.
 
-- [ ] **Step 5: Delete the old WeekChart**
+- [ ] **Step 5: Commit (do NOT delete WeekChart)**
 
-```bash
-git rm frontend/src/components/WeekChart.tsx
-```
-
-(`DistancePanel.tsx` is the only importer and is removed in Task 9; `edgeTickAnchor` + its test stay.)
-
-- [ ] **Step 6: Commit**
+`WeekChart.tsx` stays — the landing page's `DashboardPreview.tsx` imports it. `edgeTickAnchor` is shared by both charts and stays.
 
 ```bash
 git add frontend/src/pages/app-home/components/TrendChart.tsx frontend/src/pages/app-home/components/TrendChart.test.tsx
-git commit -m "feat(overview): generalized TrendChart, retire WeekChart"
+git commit -m "feat(overview): add TrendChart for period distance trend"
 ```
 
 ---
@@ -1088,21 +1086,21 @@ In `frontend/src/index.css`, add these vars to **both** the `:root` and `.dark` 
 
 ```css
 /* in :root AND .dark (identical values): */
---cat-2: #3b82f6;
---cat-3: #22c55e;
---cat-4: #a855f7;
---cat-5: #eab308;
+--ride-2: #3b82f6;
+--ride-3: #22c55e;
+--ride-4: #a855f7;
+--ride-5: #eab308;
 ```
 
 ```css
 /* under @theme inline { ... } : */
---color-cat-2: var(--cat-2);
---color-cat-3: var(--cat-3);
---color-cat-4: var(--cat-4);
---color-cat-5: var(--cat-5);
+--color-ride-2: var(--ride-2);
+--color-ride-3: var(--ride-3);
+--color-ride-4: var(--ride-4);
+--color-ride-5: var(--ride-5);
 ```
 
-(`--color-strava` already exists and is `cat-1`.)
+> WARNING: do NOT reuse the `--cat-*` / `--color-cat-*` names — those are **per-theme climb-category** colors already consumed by `api/activity-detail.ts` (`CAT_TOKEN`). The ride-type palette uses its own `--ride-*` namespace. (`--color-strava` is palette slot 1.)
 
 - [ ] **Step 2: Write the failing test**
 
@@ -1117,7 +1115,7 @@ const DATA = {
   total: 5,
   items: [
     { type: "Ride", label: "Ride", pct: "80%", fraction: 0.8, color: "var(--color-strava)" },
-    { type: "VirtualRide", label: "VirtualRide", pct: "20%", fraction: 0.2, color: "var(--color-cat-2)" },
+    { type: "VirtualRide", label: "VirtualRide", pct: "20%", fraction: 0.2, color: "var(--color-ride-2)" },
   ],
 };
 
