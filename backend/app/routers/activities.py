@@ -9,6 +9,7 @@ from app.models.activities import (
     ActivityListResponse,
     ActivityStreamsResponse,
     OverviewResponse,
+    Period,
     SortDir,
     SortField,
 )
@@ -41,10 +42,11 @@ def list_activities(
 @router.get("/overview", response_model=OverviewResponse)
 def overview(
     tz: str = Query("UTC"),
+    period: Period = Query("week"),
     athlete_id: int = Depends(get_current_athlete_id),
     supabase: Client = Depends(get_supabase),
 ) -> OverviewResponse:
-    return activities_service.get_overview(supabase, athlete_id, tz=tz)
+    return activities_service.get_overview(supabase, athlete_id, tz=tz, period=period)
 
 
 @router.get("/{activity_id}", response_model=ActivityDetailResponse)

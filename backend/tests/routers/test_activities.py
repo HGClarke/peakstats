@@ -67,6 +67,50 @@ def test_overview_forwards_tz(client, monkeypatch):
     assert seen["tz"] == "America/Los_Angeles"
 
 
+def test_overview_passes_period(client, monkeypatch):
+    captured = {}
+
+    def fake_overview(supabase, athlete_id, *, tz="UTC", period="week", now=None):
+        captured["tz"] = tz
+        captured["period"] = period
+        from app.models.activities import OverviewResponse, OverviewSummary, PeriodTotals
+        zero = PeriodTotals(distance_m=0, elev_gain_m=0, moving_time_s=0, avg_speed_ms=None)
+        return OverviewResponse(
+            period=period, this_period=zero, last_period=zero, trend=[],
+            summary=OverviewSummary(rides=0, prs=0, top_speed_ms=None,
+                                    longest_ride_m=0, max_elev_m=0),
+            ride_types=[], recent_rides=[],
+        )
+
+    monkeypatch.setattr("app.routers.activities.activities_service.get_overview", fake_overview)
+    _auth(client)
+    resp = client.get("/activities/overview?tz=UTC&period=month")
+    assert resp.status_code == 200
+    assert captured["period"] == "month"
+    assert resp.json()["period"] == "month"
+
+
+def test_overview_defaults_to_week(client, monkeypatch):
+    captured = {}
+
+    def fake_overview(supabase, athlete_id, *, tz="UTC", period="week", now=None):
+        captured["period"] = period
+        from app.models.activities import OverviewResponse, OverviewSummary, PeriodTotals
+        zero = PeriodTotals(distance_m=0, elev_gain_m=0, moving_time_s=0, avg_speed_ms=None)
+        return OverviewResponse(
+            period=period, this_period=zero, last_period=zero, trend=[],
+            summary=OverviewSummary(rides=0, prs=0, top_speed_ms=None,
+                                    longest_ride_m=0, max_elev_m=0),
+            ride_types=[], recent_rides=[],
+        )
+
+    monkeypatch.setattr("app.routers.activities.activities_service.get_overview", fake_overview)
+    _auth(client)
+    resp = client.get("/activities/overview")
+    assert resp.status_code == 200
+    assert captured["period"] == "week"
+
+
 def _list_response() -> ActivityListResponse:
     return ActivityListResponse(
         activities=[ActivityListItem(
