@@ -11,6 +11,7 @@ export interface DonutSegment {
 }
 
 /** Stacked-circle donut segments: each slice is an arc via stroke-dasharray. */
+// eslint-disable-next-line react-refresh/only-export-components -- also exports donutSegments helper used in tests
 export function donutSegments(items: RideTypeSlice[]): DonutSegment[] {
   let acc = 0;
   return items.map((it) => {

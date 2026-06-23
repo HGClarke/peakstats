@@ -16,11 +16,9 @@ vi.mock("@/api/auth", () => ({
   disconnect: vi.fn(),
 }));
 
-const refreshMutate = vi.fn();
 const useSyncStatus = vi.fn();
 vi.mock("@/api/sync", () => ({
   useSyncStatus: () => useSyncStatus(),
-  useRefreshSync: () => ({ mutate: refreshMutate, isPending: false }),
 }));
 
 const useOverview = vi.fn();
@@ -33,15 +31,46 @@ import type { DashboardOverview } from "@/types/overview";
 import AppHome from "./AppHome";
 
 const overview: DashboardOverview = {
-  kpis: [
-    { label: "DISTANCE", value: "30.0", unit: "km", delta: "+20%", deltaPositive: true },
+  period: "week",
+  headline: {
+    label: "DISTANCE",
+    periodLabel: "THIS WEEK",
+    value: "30.0",
+    unit: "km",
+    delta: "+20%",
+    deltaPositive: true,
+    deltaCaption: "vs last week",
+  },
+  secondary: [
     { label: "MOVING TIME", value: "6h 12m", unit: "", delta: "+12%", deltaPositive: true },
     { label: "ELEVATION", value: "1,240", unit: "m", delta: "+3%", deltaPositive: true },
     { label: "AVG SPEED", value: "24.8", unit: "km/h", delta: "+15%", deltaPositive: true },
   ],
-  week: [{ day: "MON", km: 14.8 }],
+  trend: [{ label: "Mon", value: 14.8 }],
+  trendUnit: "km",
+  summary: {
+    rides: "12",
+    prs: "2",
+    topSpeed: "42.0 km/h",
+    longestRide: "64.0 km",
+    maxElev: "980 m",
+  },
+  rideTypes: {
+    total: 12,
+    items: [
+      { type: "Ride", label: "Ride", pct: "100%", fraction: 1, color: "var(--color-strava)" },
+    ],
+  },
   recentRides: [
-    { id: 1, name: "River loop", meta: "Tue · Jun 16 · Ride", distLabel: "38.7 km", durLabel: "1h 34m" },
+    {
+      id: 1,
+      name: "River loop",
+      meta: "Tue · Jun 16 · Ride",
+      distLabel: "38.7 km",
+      durLabel: "1h 34m",
+      isPr: false,
+      dotColor: "var(--color-strava)",
+    },
   ],
 };
 
@@ -112,12 +141,15 @@ describe("AppHome", () => {
 });
 
 describe("AppHome overview", () => {
-  it("renders the KPIs and recent rides when loaded", () => {
+  it("renders the headline, secondary KPIs, summary, and recent rides when loaded", () => {
     useAthlete.mockReturnValue({ data: athlete, isLoading: false, error: null });
     useSyncStatus.mockReturnValue({ data: syncedStatus });
     renderPage();
-    expect(screen.getByText("DISTANCE")).toBeInTheDocument();
-    expect(screen.getByText("30.0")).toBeInTheDocument();
+    expect(screen.getByText("DISTANCE · THIS WEEK")).toBeInTheDocument();
+    expect(screen.getByText("MOVING TIME")).toBeInTheDocument();
+    expect(screen.getByText("RIDES")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Week" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Refresh from Strava/ })).toBeNull();
     expect(screen.getByText("River loop")).toBeInTheDocument();
   });
 
@@ -126,25 +158,7 @@ describe("AppHome overview", () => {
     useSyncStatus.mockReturnValue({ data: syncedStatus });
     useOverview.mockReturnValue({ data: undefined, isLoading: true, error: null });
     renderPage();
-    expect(screen.queryByText("DISTANCE")).not.toBeInTheDocument();
+    expect(screen.queryByText("DISTANCE · THIS WEEK")).not.toBeInTheDocument();
     expect(screen.getByLabelText(/loading overview/i)).toBeInTheDocument();
-  });
-});
-
-describe("AppHome refresh", () => {
-  it("refreshes from Strava", () => {
-    useAthlete.mockReturnValue({ data: athlete, isLoading: false, error: null });
-    useSyncStatus.mockReturnValue({ data: syncedStatus });
-    renderPage();
-    fireEvent.click(screen.getByRole("button", { name: /refresh from strava/i }));
-    expect(refreshMutate).toHaveBeenCalled();
-  });
-
-  it("disables refresh until the initial sync has completed", () => {
-    useAthlete.mockReturnValue({ data: athlete, isLoading: false, error: null });
-    useSyncStatus.mockReturnValue({ data: { status: "backfilling", progress: 40, synced: 5,
-      last_backfill_at: null, last_sync_at: null } });
-    renderPage();
-    expect(screen.getByRole("button", { name: /refresh from strava/i })).toBeDisabled();
   });
 });
