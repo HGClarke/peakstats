@@ -52,3 +52,13 @@ export function distanceToMeters(value: number, units: Units): number {
 export function elevationToMeters(value: number, units: Units): number {
   return units === "imperial" ? value * M_PER_FOOT : value;
 }
+
+/** Numeric distance in display units (km or mi), rounded to 1 decimal — for charts. */
+export function distanceValue(meters: number, units: Units): number {
+  return Math.round((meters / (units === "imperial" ? M_PER_MILE : 1000)) * 10) / 10;
+}
+
+/** The distance unit label for the given system, e.g. "km" / "mi". */
+export function distanceUnit(units: Units): string {
+  return units === "imperial" ? "mi" : "km";
+}
