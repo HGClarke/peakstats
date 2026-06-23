@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: { retry: false, refetchOnWindowFocus: false },
+    queries: { retry: false, refetchOnWindowFocus: false, staleTime: 5 * 60_000 },
   },
 });
 
