@@ -26,6 +26,10 @@ vi.mock("@/api/overview", () => ({
   useOverview: () => useOverview(),
 }));
 
+vi.mock("react-activity-calendar", () => ({
+  ActivityCalendar: () => <div data-testid="calendar" />,
+}));
+
 import { disconnect, logout } from "@/api/auth";
 import type { DashboardOverview } from "@/types/overview";
 import AppHome from "./AppHome";
@@ -72,6 +76,19 @@ const overview: DashboardOverview = {
       dotColor: "var(--color-strava)",
     },
   ],
+  heatmap: {
+    year: 2026,
+    activeDays: 3,
+    data: [
+      { date: "2026-01-01", count: 0, level: 0 },
+      { date: "2026-06-16", count: 38700, level: 3 },
+      { date: "2026-12-31", count: 0, level: 0 },
+    ],
+  },
+  goal: {
+    pct: 64, pctLabel: "64%", doneLabel: "64.0",
+    targetLabel: "100.0", unit: "km", remainingLabel: "36.0",
+  },
 };
 
 const syncedStatus = {
@@ -151,6 +168,8 @@ describe("AppHome overview", () => {
     expect(screen.getByRole("button", { name: "Week" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Refresh from Strava/ })).toBeNull();
     expect(screen.getByText("River loop")).toBeInTheDocument();
+    expect(screen.getByText("Weekly goal")).toBeInTheDocument();
+    expect(screen.getByText("2026 · 3 ACTIVE DAYS")).toBeInTheDocument();
   });
 
   it("shows skeletons while the overview is loading", () => {

@@ -11,6 +11,8 @@ import { PeriodSelector } from "./components/PeriodSelector";
 import { RecentRidesPanel } from "./components/RecentRidesPanel";
 import { RideTypesDonut } from "./components/RideTypesDonut";
 import { SummaryCard } from "./components/SummaryCard";
+import { ActivityHeatmap } from "./components/ActivityHeatmap";
+import { WeeklyGoalRing } from "./components/WeeklyGoalRing";
 
 const VALID_PERIODS: Period[] = ["week", "month", "year"];
 
@@ -31,7 +33,7 @@ function SkeletonPanels() {
 export default function AppHome() {
   const { data: athlete, error } = useAthlete();
   const { data: status } = useSyncStatus();
-  const { isDark } = useSettings();
+  const { isDark, units } = useSettings();
   const navigate = useNavigate();
 
   const [period, setPeriod] = useState<Period>("week");
@@ -90,6 +92,10 @@ export default function AppHome() {
               isDark={isDark}
             />
             <SummaryCard summary={overview.summary} />
+            <div className="grid grid-cols-[2.7fr_1fr] gap-4 mb-4 max-[1024px]:grid-cols-1">
+              <ActivityHeatmap view={overview.heatmap} isDark={isDark} units={units} />
+              <WeeklyGoalRing goal={overview.goal} />
+            </div>
             <div className="grid grid-cols-[1.55fr_1fr] gap-4 max-[1024px]:grid-cols-1">
               <RecentRidesPanel rides={overview.recentRides} />
               <RideTypesDonut data={overview.rideTypes} />
