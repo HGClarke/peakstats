@@ -1,3 +1,5 @@
+import type { ZonesBlockDTO } from "@/types/zones";
+
 export type Period = "week" | "month" | "year";
 
 export interface PeriodTotalsDTO {
@@ -16,6 +18,7 @@ export interface OverviewSummaryDTO {
   rides: number;
   prs: number;
   top_speed_ms: number | null;
+  top_avg_power_w: number | null;
   longest_ride_m: number;
   max_elev_m: number;
 }
@@ -56,6 +59,8 @@ export interface OverviewDTO {
   recent_rides: RecentRideDTO[];
   heatmap: HeatmapDTO;
   week_distance_m: number;
+  power_zones: ZonesBlockDTO;
+  hr_zones: ZonesBlockDTO;
 }
 
 /** Display shapes the Overview renders (formatted, units applied). */
@@ -80,9 +85,10 @@ export interface TrendPoint {
 export interface SummaryView {
   rides: string;
   prs: string;
-  topSpeed: string;     // "11.0 km/h" or "—"
-  longestRide: string;  // "64.0 km"
-  maxElev: string;      // "980 m"
+  topSpeed: string;      // "11.0 km/h" or "—"
+  topAvgPower: string;   // "287 W" or "—"
+  longestRide: string;   // "64.0 km"
+  maxElev: string;       // "980 m"
 }
 
 export interface RideTypeSlice {
@@ -140,4 +146,6 @@ export interface DashboardOverview {
   recentRides: DashRide[];
   heatmap: HeatmapView;
   goal: GoalView;
+  powerZones: ZonesBlockDTO;
+  hrZones: ZonesBlockDTO;
 }

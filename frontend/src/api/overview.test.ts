@@ -10,7 +10,7 @@ const DTO: OverviewDTO = {
     { label: "MON", value: 14800 },
     { label: "SUN", value: 38700 },
   ],
-  summary: { rides: 6, prs: 2, top_speed_ms: 11.0, longest_ride_m: 64000, max_elev_m: 980 },
+  summary: { rides: 6, prs: 2, top_speed_ms: 11.0, top_avg_power_w: 287, longest_ride_m: 64000, max_elev_m: 980 },
   ride_types: [
     { type: "Ride", count: 4 },
     { type: "VirtualRide", count: 1 },
@@ -21,6 +21,14 @@ const DTO: OverviewDTO = {
   ],
   heatmap: { year: 2026, days: [{ date: "2026-06-16", distance_m: 38700 }] },
   week_distance_m: 38700,
+  power_zones: {
+    unset: false, avg: 210,
+    buckets: [
+      { z: "Z1", name: "Active Rec.", range: "< 110 W", seconds: 600, pct: 25 },
+      { z: "Z2", name: "Endurance", range: "110–150 W", seconds: 1800, pct: 75 },
+    ],
+  },
+  hr_zones: { unset: true, avg: null, buckets: [] },
 };
 
 describe("toOverview", () => {
@@ -119,5 +127,22 @@ describe("toOverview", () => {
   it("imperial goal uses miles", () => {
     const { goal } = toOverview({ ...DTO, week_distance_m: 0 }, "imperial", 100000);
     expect(goal).toMatchObject({ unit: "mi", targetLabel: "62.1" });
+  });
+
+  it("formats top avg power in watts (no unit conversion)", () => {
+    expect(toOverview(DTO, "metric").summary.topAvgPower).toBe("287 W");
+    expect(toOverview(DTO, "imperial").summary.topAvgPower).toBe("287 W");
+  });
+
+  it("renders an em dash when no ride has power", () => {
+    const dto = { ...DTO, summary: { ...DTO.summary, top_avg_power_w: null } };
+    expect(toOverview(dto, "metric").summary.topAvgPower).toBe("—");
+  });
+
+  it("passes the power/HR zone blocks through unchanged", () => {
+    const ov = toOverview(DTO, "metric");
+    expect(ov.powerZones.buckets).toHaveLength(2);
+    expect(ov.powerZones.unset).toBe(false);
+    expect(ov.hrZones.unset).toBe(true);
   });
 });

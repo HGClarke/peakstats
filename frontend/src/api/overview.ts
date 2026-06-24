@@ -124,6 +124,8 @@ export function toOverview(dto: OverviewDTO, units: Units, weeklyGoalM?: number)
       rides: String(dto.summary.rides),
       prs: String(dto.summary.prs),
       topSpeed: dto.summary.top_speed_ms === null ? "—" : speedLabel(dto.summary.top_speed_ms, units),
+      topAvgPower: dto.summary.top_avg_power_w != null
+        ? `${Math.round(dto.summary.top_avg_power_w)} W` : "—",
       longestRide: distanceLabel(dto.summary.longest_ride_m, units),
       maxElev: elevationLabel(dto.summary.max_elev_m, units),
     },
@@ -131,6 +133,8 @@ export function toOverview(dto: OverviewDTO, units: Units, weeklyGoalM?: number)
     recentRides: dto.recent_rides.map((r) => toRide(r, units, colorByType)),
     heatmap: buildHeatmapView(dto.heatmap),
     goal: buildGoalView(dto.week_distance_m, weeklyGoalM, units),
+    powerZones: dto.power_zones,
+    hrZones: dto.hr_zones,
   };
 }
 
