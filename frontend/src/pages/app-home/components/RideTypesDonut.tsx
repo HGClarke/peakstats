@@ -12,14 +12,24 @@ const prefersReducedMotion = () =>
 /** Ride-type breakdown: donut + legend. */
 export function RideTypesDonut({ data }: { data: RideTypesView }) {
   const segments = donutSegments(data.items);
-  // Start undrawn (each arc at length 0), then reveal on mount so the CSS
-  // transition runs; reduced-motion users get the final state immediately.
+  // Draw the ring once, on first mount only: start undrawn (each arc at length
+  // 0), reveal on mount so the CSS transition runs, then drop the transition so
+  // later data changes update instantly. Reduced-motion skips the sweep.
   const [drawn, setDrawn] = useState(prefersReducedMotion);
+  const [animating, setAnimating] = useState(false);
   useEffect(() => {
     if (drawn) return;
-    const id = requestAnimationFrame(() => setDrawn(true));
+    const id = requestAnimationFrame(() => {
+      setAnimating(true);
+      setDrawn(true);
+    });
     return () => cancelAnimationFrame(id);
   }, [drawn]);
+  useEffect(() => {
+    if (!animating) return;
+    const t = setTimeout(() => setAnimating(false), SWEEP_MS + 50);
+    return () => clearTimeout(t);
+  }, [animating]);
   return (
     <div className="bg-surface-card border border-line rounded-2xl p-5 flex flex-col transition-colors duration-300">
       <div className="flex items-center justify-between mb-5">
@@ -43,11 +53,15 @@ export function RideTypesDonut({ data }: { data: RideTypesView }) {
                 key={i} cx="100" cy="100" r={R} fill="none" stroke={s.color} strokeWidth={26}
                 strokeDasharray={drawn ? s.dashArray : `0 ${s.circumference}`}
                 strokeDashoffset={s.dashOffset}
-                style={{
-                  // Each slice draws over its own share of the sweep, starting
-                  // exactly when the previous one finishes → one connected trace.
-                  transition: `stroke-dasharray ${s.fraction * SWEEP_MS}ms linear ${s.startFraction * SWEEP_MS}ms`,
-                }}
+                style={
+                  animating
+                    ? {
+                        // Each slice draws over its own share of the sweep, starting
+                        // exactly when the previous one finishes → one connected trace.
+                        transition: `stroke-dasharray ${s.fraction * SWEEP_MS}ms linear ${s.startFraction * SWEEP_MS}ms`,
+                      }
+                    : undefined
+                }
               />
             ))}
           </svg>

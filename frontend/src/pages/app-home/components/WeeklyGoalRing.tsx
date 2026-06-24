@@ -10,14 +10,20 @@ const prefersReducedMotion = () =>
 
 /** Radial progress ring: current-week distance against the athlete's weekly goal. */
 export function WeeklyGoalRing({ goal }: { goal: GoalView }) {
-  // Animate the ring filling from empty up to the real percentage on mount
-  // (and re-fill when the period/goal changes); skip for reduced-motion.
-  const [pct, setPct] = useState(() => (prefersReducedMotion() ? goal.pct : 0));
+  // Fill from empty up to the percentage once, on first mount only. After the
+  // entrance the ring tracks the live value instantly (no re-fill on period
+  // change); reduced-motion users skip the fill entirely.
+  const [filled, setFilled] = useState(prefersReducedMotion);
+  const [animating, setAnimating] = useState(false);
   useEffect(() => {
-    const id = requestAnimationFrame(() => setPct(goal.pct));
+    if (filled) return;
+    const id = requestAnimationFrame(() => {
+      setAnimating(true);
+      setFilled(true);
+    });
     return () => cancelAnimationFrame(id);
-  }, [goal.pct]);
-  const offset = CIRC * (1 - pct / 100);
+  }, [filled]);
+  const offset = CIRC * (1 - (filled ? goal.pct : 0) / 100);
   return (
     <div className="bg-surface-card border border-line rounded-2xl p-6 flex flex-col items-center justify-center gap-[18px] text-center transition-colors duration-300">
       <div className="flex items-center gap-2 self-start">
@@ -30,7 +36,8 @@ export function WeeklyGoalRing({ goal }: { goal: GoalView }) {
           <circle
             cx="60" cy="60" r={R} fill="none" stroke="#fc4c02" strokeWidth={9} strokeLinecap="round"
             strokeDasharray={CIRC} strokeDashoffset={offset}
-            className="transition-[stroke-dashoffset] duration-[1200ms] ease-out motion-reduce:transition-none"
+            className={animating ? "transition-[stroke-dashoffset] duration-[1200ms] ease-out" : undefined}
+            onTransitionEnd={() => setAnimating(false)}
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
