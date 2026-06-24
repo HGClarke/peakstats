@@ -34,7 +34,8 @@ export default function SettingsPage() {
       title="Settings"
       subtitle=""
     >
-      <div className="h-full overflow-y-auto p-7 max-w-[640px]">
+      <div className="h-full overflow-y-auto p-7">
+        <div className="max-w-[640px]">
         <div className={section}>
           <div className={heading}>Units</div>
           <div className={sub}>Distance, elevation, and speed display.</div>
@@ -110,6 +111,7 @@ export default function SettingsPage() {
         </div>
 
         <DisconnectCard />
+        </div>
       </div>
     </AppShell>
   );
