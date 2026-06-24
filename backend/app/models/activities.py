@@ -55,6 +55,20 @@ class RecentRideItem(BaseModel):
     is_pr: bool = False
 
 
+class ZoneBucket(BaseModel):
+    z: str
+    name: str
+    range: str
+    seconds: int
+    pct: float
+
+
+class ZonesBlock(BaseModel):
+    unset: bool
+    avg: float | None = None
+    buckets: list[ZoneBucket] = []
+
+
 class OverviewResponse(BaseModel):
     period: Period
     this_period: PeriodTotals
@@ -65,6 +79,8 @@ class OverviewResponse(BaseModel):
     recent_rides: list[RecentRideItem]
     heatmap: HeatmapData
     week_distance_m: float
+    power_zones: ZonesBlock = ZonesBlock(unset=True)
+    hr_zones: ZonesBlock = ZonesBlock(unset=True)
 
 
 class ActivityListItem(BaseModel):
@@ -95,20 +111,6 @@ class ActivityStreamsResponse(BaseModel):
     watts: list[float | None] | None = None
     heartrate: list[int | None] | None = None
     velocity_smooth: list[float] | None = None
-
-
-class ZoneBucket(BaseModel):
-    z: str
-    name: str
-    range: str
-    seconds: int
-    pct: float
-
-
-class ZonesBlock(BaseModel):
-    unset: bool
-    avg: float | None = None
-    buckets: list[ZoneBucket] = []
 
 
 class ClimbItem(BaseModel):

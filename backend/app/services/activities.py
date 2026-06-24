@@ -208,6 +208,10 @@ def get_overview(
         for r in recent
     ]
 
+    athlete_row = athletes_db.get_athlete(supabase, athlete_id)
+    settings: dict = athlete_row.get("settings", {}) if athlete_row else {}
+    power_zones, hr_zones = _period_zones(supabase, athlete_id, this_rows, settings)
+
     return OverviewResponse(
         period=period,
         this_period=_totals(this_rows),
@@ -218,6 +222,8 @@ def get_overview(
         recent_rides=recent_rides,
         heatmap=_heatmap(rows, base.year),
         week_distance_m=week_distance_m,
+        power_zones=power_zones,
+        hr_zones=hr_zones,
     )
 
 
@@ -322,6 +328,44 @@ def get_streams_payload(
 
 class ActivityNotFoundError(Exception):
     """Raised when an activity does not exist for the requesting athlete."""
+
+
+def _zones_from_hists(
+    hists: list[list[float]], bin_w: int, zone_defs: list[dict]
+) -> ZonesBlock:
+    summed = [0.0] * len(hists[0])
+    for h in hists:
+        for i, s in enumerate(h):
+            summed[i] += s
+    secs = analysis.zone_seconds_from_histogram(summed, bin_w, zone_defs)
+    buckets = [ZoneBucket(**b) for b in analysis.buckets_from_zone_seconds(secs, zone_defs)]
+    return ZonesBlock(unset=False, avg=None, buckets=buckets)
+
+
+def _period_zones(
+    supabase: Client, athlete_id: int, this_rows: list[ActivityRow], settings: dict
+) -> tuple[ZonesBlock, ZonesBlock]:
+    ftp = settings.get("ftp_w")
+    hr_max = settings.get("hr_max")
+    ids = [r["id"] for r in this_rows]
+    rows = (
+        metrics_db.list_metrics_for_activities(supabase, athlete_id, ids)
+        if (ftp or hr_max) else []
+    )
+
+    def block(active: int | None, key: str, bin_w: int, zone_defs: list[dict]) -> ZonesBlock:
+        if not active:
+            return ZonesBlock(unset=True)
+        hists = [m[key] for m in rows if m.get(key)]  # type: ignore[literal-required]
+        if not hists:
+            return _zones_from_hists([[0.0] * 1], bin_w, zone_defs)  # zeroed buckets
+        return _zones_from_hists(hists, bin_w, zone_defs)
+
+    power = block(ftp, "power_hist", analysis.POWER_BIN_W,
+                  analysis.power_zones(ftp) if ftp else [])
+    hr = block(hr_max, "hr_hist", analysis.HR_BIN_BPM,
+               analysis.hr_zones(hr_max) if hr_max else [])
+    return power, hr
 
 
 def _zones_block(

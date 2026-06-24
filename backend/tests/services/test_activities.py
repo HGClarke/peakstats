@@ -22,11 +22,15 @@ THIS_WEEK = [
 LAST_WEEK = [_row(3, "2026-06-10T10:00:00", 5000.0, 500, 10.0, 6.0)]
 
 
-def _patch(monkeypatch, since_rows, recent_rows):
+def _patch(monkeypatch, since_rows, recent_rows, *, settings=None, metrics=None):
     monkeypatch.setattr(activities_service.activities_db, "list_activities_since",
                         lambda supabase, athlete_id, since_iso: since_rows)
     monkeypatch.setattr(activities_service.activities_db, "list_recent_activities",
                         lambda supabase, athlete_id, limit: recent_rows)
+    monkeypatch.setattr(activities_service.athletes_db, "get_athlete",
+                        lambda supabase, athlete_id: {"settings": settings or {}})
+    monkeypatch.setattr(activities_service.metrics_db, "list_metrics_for_activities",
+                        lambda supabase, athlete_id, ids: metrics or [])
 
 
 def test_week_totals_and_deltas(monkeypatch):
@@ -273,3 +277,35 @@ def test_top_avg_power_none_when_no_power(monkeypatch):
     _patch(monkeypatch, THIS_WEEK, [])   # THIS_WEEK rows have no avg_watts key
     ov = activities_service.get_overview(object(), 7, period="week", now=NOW)
     assert ov.summary.top_avg_power_w is None
+
+
+def test_period_zones_unset_without_ftp_or_hr_max(monkeypatch):
+    _patch(monkeypatch, THIS_WEEK, [])
+    ov = activities_service.get_overview(object(), 7, period="week", now=NOW)
+    assert ov.power_zones.unset is True
+    assert ov.hr_zones.unset is True
+
+
+def test_period_zones_buckets_from_summed_histograms(monkeypatch):
+    rows = [_row(20, "2026-06-16T10:00:00", 10000.0, 1000, 100.0, 10.0)]
+    # ftp=200 → Z1 [0,110); midpoint of bin 5 = 55 W → Z1. 9 weighted seconds.
+    phist = [0.0] * 150
+    phist[5] = 9.0
+    met = [{"activity_id": 20, "athlete_id": 7, "avg_power_w": 100.0, "np_w": None,
+            "work_kj": None, "power_hist": phist, "hr_hist": None,
+            "has_power": True, "has_hr": False}]
+    _patch(monkeypatch, rows, [], settings={"ftp_w": 200}, metrics=met)
+    ov = activities_service.get_overview(object(), 7, period="week", now=NOW)
+    assert ov.power_zones.unset is False
+    by_z = {b.z: b for b in ov.power_zones.buckets}
+    assert by_z["Z1"].seconds == 9 and by_z["Z1"].pct == 100.0
+    assert ov.hr_zones.unset is True   # hr_max still missing
+
+
+def test_period_zones_configured_but_no_data_is_zeroed(monkeypatch):
+    _patch(monkeypatch, THIS_WEEK, [], settings={"ftp_w": 200, "hr_max": 190}, metrics=[])
+    ov = activities_service.get_overview(object(), 7, period="week", now=NOW)
+    assert ov.power_zones.unset is False
+    assert all(b.seconds == 0 for b in ov.power_zones.buckets)
+    assert ov.hr_zones.unset is False
+    assert len(ov.hr_zones.buckets) == 5
