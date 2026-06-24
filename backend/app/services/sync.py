@@ -8,9 +8,12 @@ from supabase import Client
 from app.clients import build_strava
 from app.config import Settings
 from app.db import activities as activities_db
+from app.db import metrics as metrics_db
 from app.db import sync_state as sync_state_db
 from app.models.sync import RefreshResponse, SyncStatusResponse
+from app.services import analysis
 from app.services import segments as segments_service
+from app.services.activities import STREAM_KEYS
 from app.services.tokens import get_valid_access_token
 
 logger = logging.getLogger(__name__)
@@ -199,5 +202,45 @@ def run_detail_backfill(supabase: Client, settings: Settings, athlete_id: int) -
                 time.sleep(DETAIL_PAUSE_S)
     except Exception:
         logger.exception("Detail backfill failed for athlete %s", athlete_id)
+    finally:
+        strava.close()
+
+
+def _fetch_streams_with_backoff(
+    strava: object, access_token: str, activity_id: int, keys: list[str]
+) -> dict:
+    while True:
+        try:
+            return strava.get_activity_streams(access_token, activity_id, keys)  # type: ignore[attr-defined]
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code != 429:
+                raise
+            retry_after = exc.response.headers.get("Retry-After")
+            time.sleep(float(retry_after) if retry_after else DETAIL_BACKOFF_S)
+
+
+def run_streams_backfill(supabase: Client, settings: Settings, athlete_id: int) -> None:
+    """Compute and store compact metrics for activities lacking an activity_metrics row.
+
+    Storage-protective: fetches streams to compute the histograms but stores ONLY the
+    metrics row (never the full stream blob) for un-viewed rides. Resumable (a metrics
+    row's existence is the marker), paced (~12/min) with 429 backoff, token re-validated
+    each iteration; one transient error skips the activity, never aborts the batch.
+    """
+    strava = build_strava(settings)
+    try:
+        ids = metrics_db.list_activity_ids_needing_metrics(supabase, athlete_id)
+        for activity_id in ids:
+            try:
+                access_token = get_valid_access_token(supabase, strava, athlete_id)
+                data = _fetch_streams_with_backoff(strava, access_token, activity_id, STREAM_KEYS)
+                row = {"activity_id": activity_id, "athlete_id": athlete_id,
+                       **analysis.compute_metrics(data)}
+                metrics_db.upsert_metrics(supabase, row)  # type: ignore[arg-type]
+            except Exception:
+                logger.exception("Streams backfill: skipping activity %s", activity_id)
+            time.sleep(DETAIL_PAUSE_S)
+    except Exception:
+        logger.exception("Streams backfill failed for athlete %s", athlete_id)
     finally:
         strava.close()

@@ -397,3 +397,82 @@ def test_to_activity_row_avg_watts_missing_is_none():
         "moving_time": 10, "elapsed_time": 10, "total_elevation_gain": 0.0,
     })
     assert row["avg_watts"] is None
+
+
+def test_run_streams_backfill_computes_and_upserts_only_pending(monkeypatch):
+    fetched, upserts = [], []
+
+    class FakeStrava:
+        def get_activity_streams(self, access_token, activity_id, keys, resolution="high"):
+            fetched.append(activity_id)
+            return {"time": [0, 1], "watts": [100, 200], "heartrate": [120, 130]}
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(sync_service, "build_strava", lambda settings: FakeStrava())
+    monkeypatch.setattr(sync_service, "get_valid_access_token",
+                        lambda supabase, strava, athlete_id: "AT")
+    monkeypatch.setattr(sync_service.metrics_db, "list_activity_ids_needing_metrics",
+                        lambda supabase, athlete_id: [11, 12])
+    monkeypatch.setattr(sync_service.metrics_db, "upsert_metrics",
+                        lambda supabase, row: upserts.append(row["activity_id"]))
+    monkeypatch.setattr(sync_service.time, "sleep", lambda s: None)
+
+    sync_service.run_streams_backfill(FakeSupabase(), settings=object(), athlete_id=7)
+    assert fetched == [11, 12]
+    assert upserts == [11, 12]
+
+
+def test_run_streams_backfill_isolates_failures(monkeypatch):
+    upserts = []
+
+    class FakeStrava:
+        def get_activity_streams(self, access_token, activity_id, keys, resolution="high"):
+            if activity_id == 12:
+                raise RuntimeError("boom")
+            return {"time": [0, 1], "watts": [100, 200]}
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(sync_service, "build_strava", lambda settings: FakeStrava())
+    monkeypatch.setattr(sync_service, "get_valid_access_token",
+                        lambda supabase, strava, athlete_id: "AT")
+    monkeypatch.setattr(sync_service.metrics_db, "list_activity_ids_needing_metrics",
+                        lambda supabase, athlete_id: [11, 12, 13])
+    monkeypatch.setattr(sync_service.metrics_db, "upsert_metrics",
+                        lambda supabase, row: upserts.append(row["activity_id"]))
+    monkeypatch.setattr(sync_service.time, "sleep", lambda s: None)
+
+    sync_service.run_streams_backfill(FakeSupabase(), settings=object(), athlete_id=7)
+    assert upserts == [11, 13]   # 12 failed mid-fetch, batch continued
+
+
+def test_run_streams_backfill_backs_off_on_429(monkeypatch):
+    import httpx
+    calls = {"n": 0}
+    slept = []
+
+    class FakeStrava:
+        def get_activity_streams(self, access_token, activity_id, keys, resolution="high"):
+            calls["n"] += 1
+            if calls["n"] == 1:
+                raise httpx.HTTPStatusError(
+                    "429", request=httpx.Request("GET", "http://x"),
+                    response=httpx.Response(429, headers={"Retry-After": "2"}))
+            return {"time": [0, 1], "watts": [100, 200]}
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(sync_service, "build_strava", lambda settings: FakeStrava())
+    monkeypatch.setattr(sync_service, "get_valid_access_token",
+                        lambda supabase, strava, athlete_id: "AT")
+    monkeypatch.setattr(sync_service.metrics_db, "list_activity_ids_needing_metrics",
+                        lambda supabase, athlete_id: [11])
+    monkeypatch.setattr(sync_service.metrics_db, "upsert_metrics", lambda supabase, row: None)
+    monkeypatch.setattr(sync_service.time, "sleep", lambda s: slept.append(s))
+
+    sync_service.run_streams_backfill(FakeSupabase(), settings=object(), athlete_id=7)
+    assert calls["n"] == 2 and 2 in slept   # retried after 429, honoured Retry-After
