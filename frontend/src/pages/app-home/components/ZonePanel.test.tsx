@@ -13,7 +13,7 @@ function renderPanel(block: ZonesBlockDTO, kind: "power" | "hr" = "power") {
 }
 
 describe("ZonePanel", () => {
-  it("renders a row per zone with label, range and percentage", () => {
+  it("renders a row per zone with label and percentage", () => {
     renderPanel({
       unset: false, avg: null,
       buckets: [
@@ -23,7 +23,8 @@ describe("ZonePanel", () => {
     });
     expect(screen.getByText("Power zones")).toBeInTheDocument();
     expect(screen.getByText("THIS WEEK")).toBeInTheDocument();
-    expect(screen.getByText("Z1 · Active Rec.")).toBeInTheDocument();
+    expect(screen.getByText("Z1")).toBeInTheDocument();
+    expect(screen.getByText("Active Rec.")).toBeInTheDocument();
     expect(screen.getByText("75%")).toBeInTheDocument();
   });
 

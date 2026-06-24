@@ -100,15 +100,15 @@ export default function AppHome() {
               isDark={isDark}
             />
             <div className="grid grid-cols-[1.1fr_1fr_1fr] gap-4 mb-4 max-[1024px]:grid-cols-1">
-              <SummaryCard summary={overview.summary} />
+              <SummaryCard summary={overview.summary} period={period} />
               <ZonePanel
-                title="Power zones"
+                title="Time in power zones"
                 caption={overview.headline.periodLabel}
                 kind="power"
                 block={overview.powerZones}
               />
               <ZonePanel
-                title="Heart-rate zones"
+                title="Time in HR zones"
                 caption={overview.headline.periodLabel}
                 kind="hr"
                 block={overview.hrZones}

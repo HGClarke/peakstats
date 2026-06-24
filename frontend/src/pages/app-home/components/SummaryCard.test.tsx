@@ -10,8 +10,9 @@ const summary: SummaryView = {
 
 describe("SummaryCard", () => {
   it("renders the Top avg power stat", () => {
-    render(<SummaryCard summary={summary} />);
+    render(<SummaryCard summary={summary} period="month" />);
     expect(screen.getByText("TOP AVG POWER")).toBeInTheDocument();
-    expect(screen.getByText("287 W")).toBeInTheDocument();
+    expect(screen.getByText("287")).toBeInTheDocument();
+    expect(screen.getByText("Monthly Highlights")).toBeInTheDocument();
   });
 });

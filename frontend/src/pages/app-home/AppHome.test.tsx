@@ -176,8 +176,8 @@ describe("AppHome overview", () => {
     expect(screen.getByText("River loop")).toBeInTheDocument();
     expect(screen.getByText("Weekly goal")).toBeInTheDocument();
     expect(screen.getByText("2026 · 3 ACTIVE DAYS")).toBeInTheDocument();
-    expect(screen.getByText("Power zones")).toBeInTheDocument();
-    expect(screen.getByText("Heart-rate zones")).toBeInTheDocument();
+    expect(screen.getByText("Time in power zones")).toBeInTheDocument();
+    expect(screen.getByText("Time in HR zones")).toBeInTheDocument();
   });
 
   it("shows skeletons while the overview is loading", () => {
