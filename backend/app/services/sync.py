@@ -219,6 +219,29 @@ def _fetch_streams_with_backoff(
             time.sleep(float(retry_after) if retry_after else DETAIL_BACKOFF_S)
 
 
+def run_avg_watts_backfill(supabase: Client, settings: Settings, athlete_id: int) -> None:
+    """One-off: re-list every activity and upsert so avg_watts (added in 0008) is
+    populated for historical rows. Partial-column upsert preserves is_pr / detail
+    columns. Idempotent — safe to re-run."""
+    strava = build_strava(settings)
+    try:
+        access_token = get_valid_access_token(supabase, strava, athlete_id)
+        page = 1
+        while True:
+            summaries = strava.list_activities(access_token, page=page, per_page=PER_PAGE)
+            if not summaries:
+                break
+            rows = [_to_activity_row(athlete_id, s) for s in summaries]
+            activities_db.upsert_activities(supabase, rows)  # type: ignore[arg-type]
+            if len(summaries) < PER_PAGE:
+                break
+            page += 1
+    except Exception:
+        logger.exception("avg_watts backfill failed for athlete %s", athlete_id)
+    finally:
+        strava.close()
+
+
 def run_streams_backfill(supabase: Client, settings: Settings, athlete_id: int) -> None:
     """Compute and store compact metrics for activities lacking an activity_metrics row.
 

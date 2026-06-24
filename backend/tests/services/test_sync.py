@@ -476,3 +476,29 @@ def test_run_streams_backfill_backs_off_on_429(monkeypatch):
 
     sync_service.run_streams_backfill(FakeSupabase(), settings=object(), athlete_id=7)
     assert calls["n"] == 2 and 2 in slept   # retried after 429, honoured Retry-After
+
+
+def test_run_avg_watts_backfill_relists_and_upserts(monkeypatch):
+    upserted_rows = []
+
+    class FakeStrava:
+        def __init__(self):
+            self.pages = {1: [{"id": 1, "name": "R", "type": "Ride",
+                               "start_date": "2026-06-15T08:00:00Z", "distance": 1.0,
+                               "moving_time": 1, "elapsed_time": 1, "total_elevation_gain": 0.0,
+                               "average_watts": 210.0}]}
+
+        def list_activities(self, access_token, *, page, per_page=200, after=None):
+            return self.pages.get(page, [])
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(sync_service, "build_strava", lambda settings: FakeStrava())
+    monkeypatch.setattr(sync_service, "get_valid_access_token",
+                        lambda supabase, strava, athlete_id: "AT")
+    monkeypatch.setattr(sync_service.activities_db, "upsert_activities",
+                        lambda supabase, rows: upserted_rows.extend(rows))
+
+    sync_service.run_avg_watts_backfill(FakeSupabase(), settings=object(), athlete_id=7)
+    assert len(upserted_rows) == 1 and upserted_rows[0]["avg_watts"] == 210.0
