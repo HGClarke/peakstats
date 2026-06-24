@@ -1,11 +1,23 @@
+import { useEffect, useState } from "react";
 import type { GoalView } from "@/types/overview";
 
 const R = 54;
 const CIRC = 2 * Math.PI * R;
 
+const prefersReducedMotion = () =>
+  typeof window !== "undefined" &&
+  !!window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+
 /** Radial progress ring: current-week distance against the athlete's weekly goal. */
 export function WeeklyGoalRing({ goal }: { goal: GoalView }) {
-  const offset = CIRC * (1 - goal.pct / 100);
+  // Animate the ring filling from empty up to the real percentage on mount
+  // (and re-fill when the period/goal changes); skip for reduced-motion.
+  const [pct, setPct] = useState(() => (prefersReducedMotion() ? goal.pct : 0));
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setPct(goal.pct));
+    return () => cancelAnimationFrame(id);
+  }, [goal.pct]);
+  const offset = CIRC * (1 - pct / 100);
   return (
     <div className="bg-surface-card border border-line rounded-2xl p-6 flex flex-col items-center justify-center gap-[18px] text-center transition-colors duration-300">
       <div className="flex items-center gap-2 self-start">
@@ -18,6 +30,7 @@ export function WeeklyGoalRing({ goal }: { goal: GoalView }) {
           <circle
             cx="60" cy="60" r={R} fill="none" stroke="#fc4c02" strokeWidth={9} strokeLinecap="round"
             strokeDasharray={CIRC} strokeDashoffset={offset}
+            className="transition-[stroke-dashoffset] duration-[1200ms] ease-out motion-reduce:transition-none"
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
