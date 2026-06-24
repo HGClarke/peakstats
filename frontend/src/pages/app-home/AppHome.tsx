@@ -11,6 +11,7 @@ import { PeriodSelector } from "./components/PeriodSelector";
 import { RecentRidesPanel } from "./components/RecentRidesPanel";
 import { RideTypesDonut } from "./components/RideTypesDonut";
 import { SummaryCard } from "./components/SummaryCard";
+import { ZonePanel } from "./components/ZonePanel";
 import { ActivityHeatmap } from "./components/ActivityHeatmap";
 import { WeeklyGoalRing } from "./components/WeeklyGoalRing";
 
@@ -22,6 +23,13 @@ function SkeletonPanels() {
       <div className="bg-surface-card border border-line rounded-2xl p-6 mb-4">
         <div className="h-[11px] w-[120px] rounded bg-skel mb-5 animate-pkskel" />
         <div className="h-[180px] rounded-[10px] bg-skel animate-pkskel" />
+      </div>
+      <div className="grid grid-cols-[1.1fr_1fr_1fr] gap-4 mb-4 max-[1024px]:grid-cols-1">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="bg-surface-card border border-line rounded-2xl p-5">
+            <div className="h-[140px] rounded-[10px] bg-skel animate-pkskel" />
+          </div>
+        ))}
       </div>
       <div className="bg-surface-card border border-line rounded-2xl p-5">
         <div className="h-[180px] rounded-[10px] bg-skel animate-pkskel" />
@@ -91,7 +99,21 @@ export default function AppHome() {
               trendUnit={overview.trendUnit}
               isDark={isDark}
             />
-            <SummaryCard summary={overview.summary} />
+            <div className="grid grid-cols-[1.1fr_1fr_1fr] gap-4 mb-4 max-[1024px]:grid-cols-1">
+              <SummaryCard summary={overview.summary} />
+              <ZonePanel
+                title="Power zones"
+                caption={overview.headline.periodLabel}
+                kind="power"
+                block={overview.powerZones}
+              />
+              <ZonePanel
+                title="Heart-rate zones"
+                caption={overview.headline.periodLabel}
+                kind="hr"
+                block={overview.hrZones}
+              />
+            </div>
             <div className="grid grid-cols-[2.7fr_1fr] gap-4 mb-4 max-[1024px]:grid-cols-1">
               <ActivityHeatmap view={overview.heatmap} isDark={isDark} units={units} />
               <WeeklyGoalRing goal={overview.goal} />

@@ -56,6 +56,7 @@ const overview: DashboardOverview = {
     rides: "12",
     prs: "2",
     topSpeed: "42.0 km/h",
+    topAvgPower: "287 W",
     longestRide: "64.0 km",
     maxElev: "980 m",
   },
@@ -89,6 +90,11 @@ const overview: DashboardOverview = {
     pct: 64, pctLabel: "64%", doneLabel: "64.0",
     targetLabel: "100.0", unit: "km", remainingLabel: "36.0",
   },
+  powerZones: {
+    unset: false, avg: 210,
+    buckets: [{ z: "Z1", name: "Active Rec.", range: "< 110 W", seconds: 600, pct: 100 }],
+  },
+  hrZones: { unset: true, avg: null, buckets: [] },
 };
 
 const syncedStatus = {
@@ -170,6 +176,8 @@ describe("AppHome overview", () => {
     expect(screen.getByText("River loop")).toBeInTheDocument();
     expect(screen.getByText("Weekly goal")).toBeInTheDocument();
     expect(screen.getByText("2026 · 3 ACTIVE DAYS")).toBeInTheDocument();
+    expect(screen.getByText("Power zones")).toBeInTheDocument();
+    expect(screen.getByText("Heart-rate zones")).toBeInTheDocument();
   });
 
   it("shows skeletons while the overview is loading", () => {
