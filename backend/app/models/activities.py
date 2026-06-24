@@ -34,6 +34,7 @@ class OverviewSummary(BaseModel):
     rides: int
     prs: int
     top_speed_ms: float | None
+    top_avg_power_w: float | None = None
     longest_ride_m: float
     max_elev_m: float
 

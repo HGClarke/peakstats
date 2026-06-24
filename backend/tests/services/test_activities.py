@@ -253,3 +253,23 @@ def test_heatmap_and_week_distance_empty_safe(monkeypatch):
     assert ov.heatmap.days == []
     assert ov.heatmap.year == 2026
     assert ov.week_distance_m == 0.0
+
+
+def _power_row(id, date_local, watts):
+    r = _row(id, date_local, 10000.0, 1000, 100.0, 10.0)
+    r["avg_watts"] = watts
+    return r
+
+
+def test_top_avg_power_is_max_over_period(monkeypatch):
+    rows = [_power_row(10, "2026-06-16T10:00:00", 180.0),
+            _power_row(11, "2026-06-17T09:00:00", 245.0)]
+    _patch(monkeypatch, rows, [])
+    ov = activities_service.get_overview(object(), 7, period="week", now=NOW)
+    assert ov.summary.top_avg_power_w == 245.0
+
+
+def test_top_avg_power_none_when_no_power(monkeypatch):
+    _patch(monkeypatch, THIS_WEEK, [])   # THIS_WEEK rows have no avg_watts key
+    ov = activities_service.get_overview(object(), 7, period="week", now=NOW)
+    assert ov.summary.top_avg_power_w is None

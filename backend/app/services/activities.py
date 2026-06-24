@@ -130,10 +130,12 @@ def _trend(
 
 def _summary(rows: list[ActivityRow]) -> OverviewSummary:
     speeds = [r["avg_speed_ms"] for r in rows if r["avg_speed_ms"] is not None]
+    powers: list[float] = [r["avg_watts"] for r in rows if r.get("avg_watts")]  # type: ignore[misc]
     return OverviewSummary(
         rides=len(rows),
         prs=sum(1 for r in rows if r.get("is_pr")),
         top_speed_ms=max(speeds) if speeds else None,
+        top_avg_power_w=max(powers) if powers else None,
         longest_ride_m=max((r["distance_m"] for r in rows), default=0.0),
         max_elev_m=max((r["elev_gain_m"] for r in rows), default=0.0),
     )
