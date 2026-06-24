@@ -114,7 +114,7 @@ export default function AppHome() {
                 block={overview.hrZones}
               />
             </div>
-            <div className="grid grid-cols-[2.7fr_1fr] gap-4 mb-4 max-[1024px]:grid-cols-1">
+            <div className="grid grid-cols-[auto_1fr] gap-4 mb-4 max-[1024px]:grid-cols-1">
               <ActivityHeatmap view={overview.heatmap} isDark={isDark} units={units} />
               <WeeklyGoalRing goal={overview.goal} />
             </div>
