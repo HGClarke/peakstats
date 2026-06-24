@@ -11,12 +11,12 @@ export function SummaryCard({ summary }: { summary: SummaryView }) {
     { label: "MAX ELEV GAIN", value: summary.maxElev },
   ];
   return (
-    <div className="bg-surface-card border border-line rounded-2xl p-5 mb-4 transition-colors duration-300">
-      <div className="grid grid-cols-6 gap-4 max-[1024px]:grid-cols-2">
+    <div className="bg-surface-card border border-line rounded-2xl px-[22px] py-5 transition-colors duration-300">
+      <div className="flex flex-col gap-[14px]">
         {stats.map((s) => (
-          <div key={s.label} className="flex flex-col gap-[6px]">
+          <div key={s.label} className="flex items-center justify-between gap-3">
             <span className="font-mono text-[9px] tracking-[0.1em] text-subtle">{s.label}</span>
-            <span className={`font-display font-semibold text-[22px] tracking-[-0.01em] leading-none ${s.accent ? "text-strava" : "text-ink"}`}>
+            <span className={`font-display font-semibold text-[18px] tracking-[-0.01em] leading-none whitespace-nowrap ${s.accent ? "text-strava" : "text-ink"}`}>
               {s.value}
             </span>
           </div>
