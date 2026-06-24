@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Any, NotRequired, TypedDict, cast
 
 from postgrest.types import CountMethod
@@ -57,6 +58,25 @@ def list_recent_activities(
         .execute()
     )
     return cast(list[ActivityRow], resp.data)
+
+
+def get_overview_rpc(
+    client: Client,
+    athlete_id: int,
+    period: str,
+    now_utc: datetime,
+    timezone: str,
+) -> dict:
+    resp = client.rpc(
+        "get_overview_data",
+        {
+            "p_athlete_id": athlete_id,
+            "p_period": period,
+            "p_now_utc": now_utc.isoformat(),
+            "p_timezone": timezone,
+        },
+    ).execute()
+    return cast(dict, resp.data[0])  # type: ignore[index]
 
 
 def count_activities(client: Client, athlete_id: int) -> int:
