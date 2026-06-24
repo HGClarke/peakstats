@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
 from math import ceil
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -180,13 +181,18 @@ def get_overview(
     year_start = base.replace(month=1, day=1)
     week_start = base - timedelta(days=base.weekday())
 
+    # list_activities_since and get_athlete are independent — run them in parallel.
     # One widened query feeds the period totals, the current-week distance, and the
     # full-year heatmap. Query by UTC start_date (can sit ~14h off local), so go back
     # an extra day and filter precisely by local time below.
     query_start = min(year_start, last_start) - timedelta(days=1)
-    rows = activities_db.list_activities_since(
-        supabase, athlete_id, query_start.isoformat()
-    )
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        future_rows = pool.submit(
+            activities_db.list_activities_since, supabase, athlete_id, query_start.isoformat()
+        )
+        future_athlete = pool.submit(athletes_db.get_athlete, supabase, athlete_id)
+        rows = future_rows.result()
+        athlete_row = future_athlete.result()
 
     ts, te, ls = (
         this_start.replace(tzinfo=None),
@@ -198,17 +204,16 @@ def get_overview(
     ws, we = week_start.replace(tzinfo=None), (week_start + timedelta(days=7)).replace(tzinfo=None)
     week_distance_m = sum(r["distance_m"] for r in rows if ws <= _local_naive(r) < we)
 
-    recent = activities_db.list_recent_activities(supabase, athlete_id, RECENT_LIMIT)
+    # rows is sorted ascending by start_date; the tail is the most recent rides.
     recent_rides = [
         RecentRideItem(
             id=r["id"], name=r["name"], type=r["type"], start_date=r["start_date"],
             start_date_local=r.get("start_date_local"), distance_m=r["distance_m"],
             moving_time_s=r["moving_time_s"], is_pr=bool(r.get("is_pr")),
         )
-        for r in recent
+        for r in rows[-RECENT_LIMIT:][::-1]
     ]
 
-    athlete_row = athletes_db.get_athlete(supabase, athlete_id)
     settings: dict = athlete_row.get("settings", {}) if athlete_row else {}
     power_zones, hr_zones = _period_zones(supabase, athlete_id, this_rows, settings)
 
