@@ -168,3 +168,23 @@ def time_in_zones(time: list[int], series: list, zones: list[dict]) -> list[dict
                 secs[i] += w
                 break
     return buckets_from_zone_seconds(secs, zones)
+
+
+def compute_metrics(data: dict) -> dict:
+    """From a flat stream dict ({time, watts, heartrate, ...}) produce the
+    activity_metrics payload. Power fields are gated on has_power so an
+    all-None watts stream yields nulls (not a misleading 0)."""
+    time: list[int] = data.get("time") or []
+    watts: list | None = data.get("watts")
+    hr: list | None = data.get("heartrate")
+    has_power = bool(watts) and any(w is not None for w in watts)  # type: ignore[union-attr]
+    has_hr = bool(hr) and any(v is not None for v in hr)  # type: ignore[union-attr]
+    return {
+        "avg_power_w": weighted_mean(time, watts) if has_power else None,  # type: ignore[arg-type]
+        "np_w": normalized_power(time, watts) if has_power else None,
+        "work_kj": total_work_kj(time, watts) if has_power else None,
+        "power_hist": histogram(time, watts, POWER_BIN_W, POWER_BINS) if has_power else None,
+        "hr_hist": histogram(time, hr, HR_BIN_BPM, HR_BINS) if has_hr else None,
+        "has_power": has_power,
+        "has_hr": has_hr,
+    }

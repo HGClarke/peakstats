@@ -109,3 +109,29 @@ def test_buckets_from_zone_seconds_matches_time_in_zones_shape():
     assert set(buckets[0]) == {"z", "name", "range", "seconds", "pct"}
     # all-zero is a valid "no data" result: zero pct, no division error
     assert analysis.buckets_from_zone_seconds([0.0] * 7, zones)[0]["pct"] == 0.0
+
+
+def test_compute_metrics_with_power_and_hr():
+    data = {"time": [0, 1, 2, 3], "watts": [100, 200, 200, 200],
+            "heartrate": [120, 130, 140, 150]}
+    m = analysis.compute_metrics(data)
+    assert m["has_power"] is True and m["has_hr"] is True
+    assert round(m["avg_power_w"]) == 175      # (100+200+200+200)/4, 1s each
+    assert m["np_w"] is not None and m["work_kj"] is not None
+    assert sum(m["power_hist"]) == 4.0         # 4 weighted seconds total
+    assert sum(m["hr_hist"]) == 4.0
+
+
+def test_compute_metrics_no_power_nulls_power_fields():
+    m = analysis.compute_metrics({"time": [0, 1], "heartrate": [120, 130]})
+    assert m["has_power"] is False
+    assert m["avg_power_w"] is None and m["np_w"] is None and m["work_kj"] is None
+    assert m["power_hist"] is None
+    assert m["has_hr"] is True and m["hr_hist"] is not None
+
+
+def test_compute_metrics_empty_streams():
+    m = analysis.compute_metrics({})
+    assert m == {"avg_power_w": None, "np_w": None, "work_kj": None,
+                 "power_hist": None, "hr_hist": None,
+                 "has_power": False, "has_hr": False}
