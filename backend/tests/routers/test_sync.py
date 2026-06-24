@@ -30,10 +30,12 @@ def test_start_schedules_backfill_when_started(client, monkeypatch):
                         lambda supabase, settings, athlete_id: spawned.update(backfill=athlete_id))
     monkeypatch.setattr(sync_service, "run_detail_backfill",
                         lambda supabase, settings, athlete_id: spawned.update(detail=athlete_id))
+    monkeypatch.setattr(sync_service, "run_streams_backfill",
+                        lambda supabase, settings, athlete_id: spawned.update(streams=athlete_id))
     _auth(client)
     response = client.post("/sync/start")
     assert response.status_code == 200
-    assert spawned == {"backfill": 99, "detail": 99}
+    assert spawned == {"backfill": 99, "detail": 99, "streams": 99}
 
 
 def test_start_does_not_reschedule_when_already_running(client, monkeypatch):
@@ -46,6 +48,8 @@ def test_start_does_not_reschedule_when_already_running(client, monkeypatch):
 
     monkeypatch.setattr(sync_service, "run_backfill", fail)
     monkeypatch.setattr(sync_service, "run_detail_backfill",
+                        lambda supabase, settings, athlete_id: None)
+    monkeypatch.setattr(sync_service, "run_streams_backfill",
                         lambda supabase, settings, athlete_id: None)
     _auth(client)
     assert client.post("/sync/start").status_code == 200

@@ -32,6 +32,9 @@ def start(
         background_tasks.add_task(
             sync_service.run_detail_backfill, supabase, settings, athlete_id
         )
+        background_tasks.add_task(
+            sync_service.run_streams_backfill, supabase, settings, athlete_id
+        )
     return result
 
 
