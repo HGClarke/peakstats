@@ -47,6 +47,14 @@ backend/
     db/                    # mirrors app/db/
 ```
 
+## Aggregation rule
+
+**Aggregation belongs in Postgres, not Python.** Any query that groups, sums, counts, or
+filters a large result set must be expressed as a Supabase RPC (`CREATE OR REPLACE FUNCTION`)
+and called via `client.rpc(...)`. Never pull raw rows to Python just to aggregate them there —
+this inflates payload size and wastes a round-trip. See `supabase/migrations/0005_segment_summaries_rpc.sql`
+and `0009_overview_rpc.sql` for the established pattern.
+
 ## Architecture rules
 
 **Layering order: routers → services → db. No layer may skip another.**
