@@ -33,6 +33,9 @@ it("the not-found page links back home", async () => {
 
 it("renders the activity detail page at /activities/:id", async () => {
   renderAt("/activities/5");
-  // Should mount ActivityDetailPage, not NotFoundPage
+  // ActivityDetailPage is code-split: await its chunk, then confirm it mounted
+  // (the AppShell "Activity" heading is stable across its loading/error states)
+  // rather than the NotFoundPage.
+  expect(await screen.findByRole("heading", { name: "Activity" })).toBeInTheDocument();
   expect(screen.queryByText(/page not found/i)).not.toBeInTheDocument();
 });

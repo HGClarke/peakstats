@@ -23,7 +23,7 @@ vi.mock("@/api/sync", () => ({
 
 const useOverview = vi.fn();
 vi.mock("@/api/overview", () => ({
-  useOverview: () => useOverview(),
+  useOverview: (period: unknown, options: unknown) => useOverview(period, options),
 }));
 
 vi.mock("react-activity-calendar", () => ({
@@ -187,5 +187,25 @@ describe("AppHome overview", () => {
     renderPage();
     expect(screen.queryByText("DISTANCE · THIS WEEK")).not.toBeInTheDocument();
     expect(screen.getByLabelText(/loading overview/i)).toBeInTheDocument();
+  });
+
+  it("seeds the period from the athlete's default and never fires a throwaway 'week' fetch", () => {
+    useAthlete.mockReturnValue({
+      data: { ...athlete, settings: { ...athlete.settings, default_period: "month" } },
+      isLoading: false,
+      error: null,
+    });
+    useSyncStatus.mockReturnValue({ data: syncedStatus });
+    renderPage();
+
+    // The saved default drives the selector…
+    expect(screen.getByRole("button", { name: "Month" })).toHaveAttribute("aria-pressed", "true");
+    // …and "month" is actually requested.
+    expect(useOverview.mock.calls.map((c) => c[0])).toContain("month");
+    // …while no render ever *enables* a "week" overview query.
+    const wastedWeekFetch = useOverview.mock.calls.some(
+      ([period, options]) => period === "week" && (options as { enabled?: boolean })?.enabled !== false,
+    );
+    expect(wastedWeekFetch).toBe(false);
   });
 });

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { disconnect, logout, useAthlete } from "@/api/auth";
 import { useOverview } from "@/api/overview";
@@ -44,18 +44,19 @@ export default function AppHome() {
   const { isDark, units } = useSettings();
   const navigate = useNavigate();
 
-  const [period, setPeriod] = useState<Period>("week");
-  const seeded = useRef(false);
-  useEffect(() => {
-    if (!seeded.current && athlete) {
-      const dp = athlete.settings.default_period as Period;
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      if (VALID_PERIODS.includes(dp)) setPeriod(dp);
-      seeded.current = true;
-    }
-  }, [athlete]);
+  // Seed the period from the athlete's saved default the moment it's available,
+  // using the render-time state pattern (as in ActivitiesPage). Gating the
+  // overview query on a seeded period avoids a throwaway "week" fetch when the
+  // default is month/year — without the effect's extra render + double request.
+  const [period, setPeriod] = useState<Period | null>(null);
+  if (period === null && athlete) {
+    const dp = athlete.settings.default_period as Period;
+    setPeriod(VALID_PERIODS.includes(dp) ? dp : "week");
+  }
 
-  const { data: overview, isLoading } = useOverview(period);
+  const { data: overview, isLoading } = useOverview(period ?? "week", {
+    enabled: period !== null,
+  });
 
   useEffect(() => {
     if (error) navigate("/", { replace: true });
@@ -85,7 +86,7 @@ export default function AppHome() {
       onLogout={handleLogout}
       title="Overview"
       subtitle={synced ? "UP TO DATE" : "SYNCING"}
-      headerRight={<PeriodSelector value={period} onChange={setPeriod} />}
+      headerRight={<PeriodSelector value={period ?? "week"} onChange={setPeriod} />}
     >
       <div className="h-full overflow-y-auto">
         {isLoading || !overview ? (
@@ -100,7 +101,7 @@ export default function AppHome() {
               isDark={isDark}
             />
             <div className="grid grid-cols-[1.1fr_1fr_1fr] gap-4 mb-4 max-[1024px]:grid-cols-1">
-              <SummaryCard summary={overview.summary} period={period} />
+              <SummaryCard summary={overview.summary} period={period ?? "week"} />
               <ZonePanel
                 title="Time in power zones"
                 caption={overview.headline.periodLabel}

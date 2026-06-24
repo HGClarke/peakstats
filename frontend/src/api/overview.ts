@@ -147,13 +147,14 @@ export function fetchOverview(period: Period): Promise<OverviewDTO> {
 
 export const OVERVIEW_REFETCH_INTERVAL_MS = 60_000;
 
-export function useOverview(period: Period) {
+export function useOverview(period: Period, options?: { enabled?: boolean }) {
   const { units } = useSettings();
   const { data: athlete } = useAthlete();
   const weeklyGoalM = athlete?.settings.weekly_goal_m;
   return useQuery({
     queryKey: ["activities", "overview", period] as const,
     queryFn: () => fetchOverview(period),
+    enabled: options?.enabled ?? true,
     refetchOnWindowFocus: true,
     refetchInterval: OVERVIEW_REFETCH_INTERVAL_MS,
     select: (dto: OverviewDTO) => toOverview(dto, units, weeklyGoalM),
