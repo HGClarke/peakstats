@@ -6,6 +6,7 @@ from supabase import Client
 
 from app.db import activities as activities_db
 from app.db import athletes as athletes_db
+from app.db import metrics as metrics_db
 from app.db import streams as streams_db
 from app.db.activities import ActivityRow
 from app.models.activities import (
@@ -272,19 +273,31 @@ def ensure_streams(
     """Return cached stream data for the activity, fetching from Strava on miss.
 
     Stores a sentinel (empty data, point_count 0) when Strava has no streams, so
-    we never refetch. `data` is the flat object-of-arrays.
+    we never refetch. Always (re)computes and upserts the compact activity_metrics
+    row so viewed/new rides' metrics stay current and self-heal. `data` is the flat
+    object-of-arrays.
     """
     existing = streams_db.get_streams(supabase, activity_id)
     if existing is not None:
-        return existing["data"]
-    token = get_valid_access_token(supabase, strava, athlete_id)
-    data = strava.get_activity_streams(token, activity_id, STREAM_KEYS)
-    point_count = len(data.get("time") or data.get("distance") or [])
-    streams_db.upsert_streams(supabase, {
-        "activity_id": activity_id, "athlete_id": athlete_id,
-        "data": data, "resolution": "high", "point_count": point_count,
-    })
+        data = existing["data"]
+    else:
+        token = get_valid_access_token(supabase, strava, athlete_id)
+        data = strava.get_activity_streams(token, activity_id, STREAM_KEYS)
+        point_count = len(data.get("time") or data.get("distance") or [])
+        streams_db.upsert_streams(supabase, {
+            "activity_id": activity_id, "athlete_id": athlete_id,
+            "data": data, "resolution": "high", "point_count": point_count,
+        })
+    _store_metrics(supabase, athlete_id, activity_id, data)
     return data
+
+
+def _store_metrics(
+    supabase: Client, athlete_id: int, activity_id: int, data: dict
+) -> None:
+    """Compute and upsert the compact activity_metrics row from a stream dict."""
+    row = {"activity_id": activity_id, "athlete_id": athlete_id, **analysis.compute_metrics(data)}
+    metrics_db.upsert_metrics(supabase, row)  # type: ignore[arg-type]
 
 
 def get_streams_payload(
