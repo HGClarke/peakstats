@@ -16,6 +16,7 @@ class ActivityRow(TypedDict):
     elapsed_time_s: int
     elev_gain_m: float
     avg_speed_ms: float | None
+    avg_watts: NotRequired[float | None]
     avg_hr: int | None
     summary_polyline: str | None
     created_at: NotRequired[str]

@@ -40,6 +40,7 @@ def _to_activity_row(athlete_id: int, summary: dict) -> dict:
         "elapsed_time_s": summary.get("elapsed_time", 0),
         "elev_gain_m": summary.get("total_elevation_gain", 0.0),
         "avg_speed_ms": summary.get("average_speed"),
+        "avg_watts": summary.get("average_watts"),
         "avg_hr": round(hr) if hr is not None else None,
         "summary_polyline": activity_map.get("summary_polyline"),
     }

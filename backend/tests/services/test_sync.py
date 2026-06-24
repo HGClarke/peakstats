@@ -378,3 +378,22 @@ def test_run_detail_backfill_refreshes_token_each_activity(monkeypatch):
 
     sync_service.run_detail_backfill(FakeSupabase(), settings=object(), athlete_id=7)
     assert len(token_calls) == 2    # token re-validated once per activity
+
+
+def test_to_activity_row_maps_avg_watts():
+    row = sync_service._to_activity_row(7, {
+        "id": 9, "name": "Power ride", "type": "Ride",
+        "start_date": "2026-06-21T05:00:00Z", "distance": 1000.0,
+        "moving_time": 100, "elapsed_time": 100, "total_elevation_gain": 0.0,
+        "average_watts": 211.4,
+    })
+    assert row["avg_watts"] == 211.4
+
+
+def test_to_activity_row_avg_watts_missing_is_none():
+    row = sync_service._to_activity_row(7, {
+        "id": 1, "name": "Spin", "type": "Workout",
+        "start_date": "2026-06-15T08:00:00Z", "distance": 0.0,
+        "moving_time": 10, "elapsed_time": 10, "total_elevation_gain": 0.0,
+    })
+    assert row["avg_watts"] is None
