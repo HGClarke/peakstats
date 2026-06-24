@@ -25,8 +25,9 @@ export function TrendChart({
   isDark: boolean;
 }) {
   const tick = isDark ? "#6b7280" : "#8a909a";
-  // Avoid crowding day-level labels on the month view.
-  const interval = points.length > 12 ? Math.floor(points.length / 8) : 0;
+  // Month view carries one point per day (>12); show a tick every 7th day so the
+  // axis reads by week (W1..W5) instead of crowding day-level labels.
+  const interval = points.length > 12 ? 6 : 0;
   return (
     <ResponsiveContainer width="100%" height={180}>
       <AreaChart data={points} margin={{ top: 8, right: 6, bottom: 0, left: 0 }}>
@@ -37,9 +38,9 @@ export function TrendChart({
           </linearGradient>
         </defs>
         <YAxis
-          width={40} axisLine={false} tickLine={false}
+          width={52} axisLine={false} tickLine={false}
           tick={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, fill: tick }}
-          tickFormatter={(v: number) => `${v}`}
+          tickFormatter={(v: number) => `${Math.round(v)}`}
           unit={` ${unit}`}
         />
         <XAxis

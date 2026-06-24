@@ -123,8 +123,8 @@ def _trend(
             totals[idx] += r["distance_m"]
     if period == "week":
         labels = _WEEKDAY_LABELS
-    else:  # month — day-of-month numbers
-        labels = [str((this_start.date() + timedelta(days=i)).day) for i in range(n_days)]
+    else:  # month — daily values, but the x-axis is marked by week (W1..W5)
+        labels = [f"W{i // 7 + 1}" if i % 7 == 0 else "" for i in range(n_days)]
     return [TrendPoint(label=labels[i], value=round(totals[i], 1)) for i in range(n_days)]
 
 

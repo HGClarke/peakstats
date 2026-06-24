@@ -73,14 +73,17 @@ def test_recent_rides_include_pr_flag(monkeypatch):
     assert ov.recent_rides[0].is_pr is False
 
 
-def test_month_trend_is_daily_for_calendar_month(monkeypatch):
+def test_month_trend_is_daily_with_week_labels(monkeypatch):
     rows = [_row(1, "2026-06-01T10:00:00", 5000.0, 600, 0.0, 8.0),
             _row(2, "2026-05-31T10:00:00", 9000.0, 600, 0.0, 8.0)]  # last month
     _patch(monkeypatch, rows, [])
     ov = activities_service.get_overview(object(), 7, period="month", now=NOW)
-    assert len(ov.trend) == 30          # June has 30 days
-    assert ov.trend[0].label == "1"
+    assert len(ov.trend) == 30          # June has 30 days — one point per day
     assert ov.trend[0].value == 5000.0
+    # Daily resolution stays; labels mark week boundaries (W1..W5), blank between.
+    assert ov.trend[0].label == "W1"
+    assert ov.trend[1].label == ""
+    assert [ov.trend[i].label for i in (0, 7, 14, 21, 28)] == ["W1", "W2", "W3", "W4", "W5"]
     assert ov.this_period.distance_m == 5000.0
     assert ov.last_period.distance_m == 9000.0
 
