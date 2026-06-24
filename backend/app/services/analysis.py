@@ -65,6 +65,11 @@ POWER_ZONES = [
 HR_ZONE_BOUNDS = [0.68, 0.78, 0.88, 0.95]
 HR_ZONE_NAMES = ["Recovery", "Endurance", "Tempo", "Threshold", "Maximum"]
 
+POWER_BIN_W = 10
+POWER_BINS = 150       # [0, 1500) W; samples ≥ 1500 fold into the last bin
+HR_BIN_BPM = 5
+HR_BINS = 44           # [0, 220) bpm; overflow into the last bin
+
 
 def _fmt_range(lo: int, hi: int | None, unit: str) -> str:
     if lo == 0 and hi is not None:
@@ -109,6 +114,47 @@ def compute_climbs(rows: list[dict]) -> list[dict]:
     return out
 
 
+def histogram(time: list[int], series: list | None, bin_w: int, n_bins: int) -> list[float]:
+    """Δt-weighted seconds per absolute bin. Overflow folds into the last bin;
+    None samples are skipped. Empty/None series → a zero array of length n_bins."""
+    out = [0.0] * n_bins
+    if not series:
+        return out
+    dt = deltas(time)
+    for w, v in zip(dt, series, strict=False):
+        if v is None:
+            continue
+        idx = int(v // bin_w)
+        idx = 0 if idx < 0 else min(idx, n_bins - 1)
+        out[idx] += w
+    return out
+
+
+def zone_seconds_from_histogram(
+    hist: list[float], bin_w: int, zones: list[dict]
+) -> list[float]:
+    """Sum each bin's seconds into the zone whose [lo, hi) contains the bin midpoint."""
+    secs = [0.0] * len(zones)
+    for i, s in enumerate(hist):
+        mid = i * bin_w + bin_w / 2
+        for j, z in enumerate(zones):
+            hi = z["hi"]
+            if mid >= z["lo"] and (hi is None or mid < hi):
+                secs[j] += s
+                break
+    return secs
+
+
+def buckets_from_zone_seconds(secs: list[float], zones: list[dict]) -> list[dict]:
+    """Format per-zone seconds into {z,name,range,seconds,pct} dicts."""
+    total = sum(secs) or 1.0
+    return [
+        {"z": z["z"], "name": z["name"], "range": z["range"],
+         "seconds": round(secs[i]), "pct": round(secs[i] / total * 100, 1)}
+        for i, z in enumerate(zones)
+    ]
+
+
 def time_in_zones(time: list[int], series: list, zones: list[dict]) -> list[dict]:
     """Δt-weighted seconds and percentage spent in each zone bucket."""
     dt = deltas(time)
@@ -121,9 +167,4 @@ def time_in_zones(time: list[int], series: list, zones: list[dict]) -> list[dict
             if v >= z["lo"] and (hi is None or v < hi):
                 secs[i] += w
                 break
-    total = sum(secs) or 1.0
-    return [
-        {"z": z["z"], "name": z["name"], "range": z["range"],
-         "seconds": round(secs[i]), "pct": round(secs[i] / total * 100, 1)}
-        for i, z in enumerate(zones)
-    ]
+    return buckets_from_zone_seconds(secs, zones)

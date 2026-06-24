@@ -73,3 +73,39 @@ def test_compute_climbs_vam_and_sort():
     out = analysis.compute_climbs(rows)
     assert out[0]["name"] == "Hawk Hill"  # cat 3 before cat 2
     assert out[1]["vam"] == round(310 / (1089 / 3600))  # ≈ 1025
+
+
+def test_histogram_dt_weighted_bins_and_overflow():
+    # deltas([0,1,2,3]) = [1,1,1,1]; bin_w=10 → 5→bin0, 14→bin1, 25→bin2, 9999→last
+    h = analysis.histogram([0, 1, 2, 3], [5, 14, 25, 9999], 10, 150)
+    assert len(h) == 150
+    assert h[0] == 1.0 and h[1] == 1.0 and h[2] == 1.0
+    assert h[149] == 1.0          # 9999 W overflows into the last bin
+
+
+def test_histogram_skips_none_and_empty_series():
+    assert analysis.histogram([0, 1, 2], [50, None, 50], 10, 150)[5] == 2.0
+    assert analysis.histogram([0, 1], None, 10, 150) == [0.0] * 150
+    assert analysis.histogram([], [], 5, 44) == [0.0] * 44
+
+
+def test_zone_seconds_from_histogram_maps_bin_midpoints():
+    zones = analysis.power_zones(200)  # Z1 [0,110) Z2 [110,150) ... Z7 [300,None)
+    hist = [0.0] * 150
+    hist[5] = 7.0      # midpoint 55 W  → Z1
+    hist[12] = 3.0     # midpoint 125 W → Z2
+    hist[149] = 4.0    # midpoint 1495 W → Z7 (open top)
+    secs = analysis.zone_seconds_from_histogram(hist, 10, zones)
+    assert secs[0] == 7.0 and secs[1] == 3.0 and secs[6] == 4.0
+    assert analysis.zone_seconds_from_histogram([0.0] * 150, 10, zones) == [0.0] * 7
+
+
+def test_buckets_from_zone_seconds_matches_time_in_zones_shape():
+    zones = analysis.power_zones(200)
+    buckets = analysis.buckets_from_zone_seconds([6.0, 0.0, 0.0, 0.0, 0.0, 0.0, 2.0], zones)
+    by_z = {b["z"]: b for b in buckets}
+    assert by_z["Z1"]["seconds"] == 6 and by_z["Z1"]["pct"] == 75.0
+    assert by_z["Z7"]["pct"] == 25.0
+    assert set(buckets[0]) == {"z", "name", "range", "seconds", "pct"}
+    # all-zero is a valid "no data" result: zero pct, no division error
+    assert analysis.buckets_from_zone_seconds([0.0] * 7, zones)[0]["pct"] == 0.0
