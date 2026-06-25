@@ -18,9 +18,10 @@ export function makePager(current: number, totalPages: number): PagerToken[] {
   let end = Math.min(totalPages - 1, current + 1);
   if (current <= 3) { start = 2; end = 4; }
   if (current >= totalPages - 2) { start = totalPages - 3; end = totalPages - 1; }
-  if (start > 2) gap();
+  // Gap only when 3+ pages are hidden; otherwise fill them in to avoid a lone "…"
+  if (start - 2 >= 3) { gap(); } else { for (let p = 2; p < start; p++) add(p); }
   for (let p = start; p <= end; p++) add(p);
-  if (end < totalPages - 1) gap();
+  if (totalPages - 1 - end >= 3) { gap(); } else { for (let p = end + 1; p < totalPages; p++) add(p); }
   add(totalPages);
   return out;
 }
