@@ -16,13 +16,13 @@ _CACHED_ROW = {
 
 
 def test_ensure_streams_returns_cached_without_fetch(monkeypatch):
-    saved = {}
-    monkeypatch.setattr(svc.metrics_db, "upsert_metrics", lambda c, row: saved.update(row))
+    called = []
+    monkeypatch.setattr(svc.metrics_db, "upsert_metrics", lambda c, row: called.append(row))
     strava = _Strava()
     data = svc.ensure_streams(object(), strava, 7, 5, existing=_CACHED_ROW)
-    assert data == {"time": [0, 1], "watts": [100, 200]} and strava.calls == 0
-    # metrics self-heal on cache hit
-    assert saved["activity_id"] == 5 and saved["has_power"] is True
+    assert data == {"time": [0, 1], "watts": [100, 200]}
+    assert strava.calls == 0
+    assert called == []  # no metrics write on cache hit — stream data is immutable
 
 
 def test_ensure_streams_fetches_persists_on_miss(monkeypatch):

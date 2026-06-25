@@ -194,7 +194,9 @@ def ensure_streams(
             "activity_id": activity_id, "athlete_id": athlete_id,
             "data": data, "resolution": "high", "point_count": point_count,
         })
-    _store_metrics(supabase, athlete_id, activity_id, data)
+        # Compute and persist metrics on first fetch only — stream data is immutable
+        # so recomputing on every cache hit is pure overhead.
+        _store_metrics(supabase, athlete_id, activity_id, data)
     return data
 
 
