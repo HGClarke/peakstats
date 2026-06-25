@@ -1,6 +1,8 @@
+import logging
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 from math import ceil
+from time import perf_counter
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from supabase import Client
@@ -33,6 +35,8 @@ from app.models.activities import (
 from app.services import analysis
 from app.services.tokens import get_valid_access_token
 from app.strava import StravaClient
+
+_log = logging.getLogger(__name__)
 
 PAGE_SIZE = 9
 STREAM_KEYS = ["time", "distance", "altitude", "heartrate", "watts", "velocity_smooth"]
@@ -214,8 +218,19 @@ def get_streams_payload(
     athlete_id: int,
     activity_id: int,
 ) -> ActivityStreamsResponse:
+    t0 = perf_counter()
     existing = streams_db.get_streams(supabase, activity_id)
+    t_db = perf_counter()
     data = ensure_streams(supabase, strava, athlete_id, activity_id, existing=existing)
+    t_streams = perf_counter()
+    _log.info(
+        "get_streams_payload %s: get_streams=%.0fms ensure=%.0fms total=%.0fms cached=%s",
+        activity_id,
+        (t_db - t0) * 1000,
+        (t_streams - t_db) * 1000,
+        (t_streams - t0) * 1000,
+        existing is not None,
+    )
     return ActivityStreamsResponse(
         point_count=len(data.get("time") or data.get("distance") or []),
         time=data.get("time"),
@@ -286,6 +301,8 @@ def get_detail(
     athlete_id: int,
     activity_id: int,
 ) -> ActivityDetailResponse:
+    t0 = perf_counter()
+
     # All four reads are independent — run them in parallel.
     with ThreadPoolExecutor(max_workers=4) as pool:
         future_row = pool.submit(activities_db.get_activity, supabase, athlete_id, activity_id)
@@ -299,9 +316,13 @@ def get_detail(
         athlete_row = future_athlete.result()
         raw_climbs = future_climbs.result()
 
+    t_parallel = perf_counter()
+
     if row is None:
         raise ActivityNotFoundError(f"activity {activity_id} not found for athlete")
     data = ensure_streams(supabase, strava, athlete_id, activity_id, existing=existing)
+
+    t_streams = perf_counter()
     time = data.get("time") or []
     watts = data.get("watts")
     hr = data.get("heartrate")
@@ -329,6 +350,16 @@ def get_detail(
                   time_s=c["elapsed_time_s"], vam=c["vam"])
         for c in analysis.compute_climbs(climb_rows)
     ]
+    t_total = perf_counter()
+    _log.info(
+        "get_detail %s: parallel_reads=%.0fms ensure_streams=%.0fms total=%.0fms "
+        "streams_cached=%s",
+        activity_id,
+        (t_parallel - t0) * 1000,
+        (t_streams - t_parallel) * 1000,
+        (t_total - t0) * 1000,
+        existing is not None,
+    )
     return ActivityDetailResponse(
         id=row["id"], name=row["name"], type=row["type"],
         start_date=row["start_date"], start_date_local=row.get("start_date_local"),
