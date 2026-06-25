@@ -223,13 +223,13 @@ def get_streams_payload(
     t_db = perf_counter()
     data = ensure_streams(supabase, strava, athlete_id, activity_id, existing=existing)
     t_streams = perf_counter()
-    _log.info(
-        "get_streams_payload %s: get_streams=%.0fms ensure=%.0fms total=%.0fms cached=%s",
-        activity_id,
-        (t_db - t0) * 1000,
-        (t_streams - t_db) * 1000,
-        (t_streams - t0) * 1000,
-        existing is not None,
+    print(  # noqa: T201
+        f"[TIMING] get_streams_payload {activity_id}: "
+        f"get_streams={int((t_db - t0) * 1000)}ms "
+        f"ensure={int((t_streams - t_db) * 1000)}ms "
+        f"total={int((t_streams - t0) * 1000)}ms "
+        f"cached={existing is not None}",
+        flush=True,
     )
     return ActivityStreamsResponse(
         point_count=len(data.get("time") or data.get("distance") or []),
@@ -351,14 +351,13 @@ def get_detail(
         for c in analysis.compute_climbs(climb_rows)
     ]
     t_total = perf_counter()
-    _log.info(
-        "get_detail %s: parallel_reads=%.0fms ensure_streams=%.0fms total=%.0fms "
-        "streams_cached=%s",
-        activity_id,
-        (t_parallel - t0) * 1000,
-        (t_streams - t_parallel) * 1000,
-        (t_total - t0) * 1000,
-        existing is not None,
+    print(  # noqa: T201
+        f"[TIMING] get_detail {activity_id}: "
+        f"parallel_reads={int((t_parallel - t0) * 1000)}ms "
+        f"ensure_streams={int((t_streams - t_parallel) * 1000)}ms "
+        f"total={int((t_total - t0) * 1000)}ms "
+        f"streams_cached={existing is not None}",
+        flush=True,
     )
     return ActivityDetailResponse(
         id=row["id"], name=row["name"], type=row["type"],
