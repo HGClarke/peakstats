@@ -9,6 +9,7 @@ from app.db import activities as activities_db
 from app.db import athletes as athletes_db
 from app.db import metrics as metrics_db
 from app.db import streams as streams_db
+from app.db.streams import StreamRow
 from app.models.activities import (
     ActivityDetailResponse,
     ActivityListItem,
@@ -172,15 +173,17 @@ def ensure_streams(
     strava: StravaClient,
     athlete_id: int,
     activity_id: int,
+    *,
+    existing: StreamRow | None,
 ) -> dict[str, list]:
-    """Return cached stream data for the activity, fetching from Strava on miss.
+    """Return stream data for the activity, fetching from Strava if `existing` is None.
 
-    Stores a sentinel (empty data, point_count 0) when Strava has no streams, so
-    we never refetch. Always (re)computes and upserts the compact activity_metrics
-    row so viewed/new rides' metrics stay current and self-heal. `data` is the flat
-    object-of-arrays.
+    Callers are responsible for fetching `existing` via `streams_db.get_streams` —
+    this lets `get_detail` pipeline that lookup in parallel with other DB reads.
+    Stores a sentinel (empty data, point_count 0) on Strava miss so we never refetch.
+    Always upserts activity_metrics so metrics stay current and self-heal.
+    `data` is the flat object-of-arrays.
     """
-    existing = streams_db.get_streams(supabase, activity_id)
     if existing is not None:
         data = existing["data"]
     else:
@@ -209,7 +212,8 @@ def get_streams_payload(
     athlete_id: int,
     activity_id: int,
 ) -> ActivityStreamsResponse:
-    data = ensure_streams(supabase, strava, athlete_id, activity_id)
+    existing = streams_db.get_streams(supabase, activity_id)
+    data = ensure_streams(supabase, strava, athlete_id, activity_id, existing=existing)
     return ActivityStreamsResponse(
         point_count=len(data.get("time") or data.get("distance") or []),
         time=data.get("time"),
@@ -280,14 +284,25 @@ def get_detail(
     athlete_id: int,
     activity_id: int,
 ) -> ActivityDetailResponse:
-    row = activities_db.get_activity(supabase, athlete_id, activity_id)
+    # All four reads are independent — run them in parallel.
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        future_row = pool.submit(activities_db.get_activity, supabase, athlete_id, activity_id)
+        future_streams = pool.submit(streams_db.get_streams, supabase, activity_id)
+        future_athlete = pool.submit(athletes_db.get_athlete, supabase, athlete_id)
+        future_climbs = pool.submit(
+            activities_db.list_activity_climbs, supabase, athlete_id, activity_id
+        )
+        row = future_row.result()
+        existing = future_streams.result()
+        athlete_row = future_athlete.result()
+        raw_climbs = future_climbs.result()
+
     if row is None:
         raise ActivityNotFoundError(f"activity {activity_id} not found for athlete")
-    data = ensure_streams(supabase, strava, athlete_id, activity_id)
+    data = ensure_streams(supabase, strava, athlete_id, activity_id, existing=existing)
     time = data.get("time") or []
     watts = data.get("watts")
     hr = data.get("heartrate")
-    athlete_row = athletes_db.get_athlete(supabase, athlete_id)
     settings: dict = athlete_row.get("settings", {}) if athlete_row else {}
     ftp = settings.get("ftp_w")
     hr_max = settings.get("hr_max")
@@ -303,7 +318,7 @@ def get_detail(
         {"name": r["segments"]["name"], "climb_category": r["segments"]["climb_category"],
          "distance_m": r["segments"]["distance_m"], "avg_grade": r["segments"]["avg_grade"],
          "elev_gain_m": r["segments"]["elev_gain_m"], "elapsed_time_s": r["elapsed_time_s"]}
-        for r in activities_db.list_activity_climbs(supabase, athlete_id, activity_id)
+        for r in raw_climbs
         if r.get("segments") and r["segments"]["climb_category"] > 0
     ]
     climbs = [
